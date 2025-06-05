@@ -1,0 +1,136 @@
+APLIKACJA: DZIENNIK TRANSAKCJI AI 3.0 - ARCHITEKTURA I DOKUMENTACJA
+===========================================================================
+
+OPIS PROGRAMU:
+--------------
+Aplikacja służy do analizy transakcji tradingowych z możliwością obliczania maksymalnego Take Profit dla pozycji przed uderzeniem Stop Loss. Program analizuje dane świeczkowe (OHLC) z bazy SQLite i oblicza różne scenariusze TP, w tym z funkcją Break Even.
+
+GŁÓWNE FUNKCJONALNOŚCI:
+-----------------------
+1. Przeglądanie i edycja transakcji z bazy danych
+2. Kalkulator maksymalnego Take Profit z 3 trybami:
+   - SL stały (użytkownik podaje wartość SL w punktach)
+   - SL ręczne (z pola sl_recznie w bazie)
+   - SL z bazy (z pola sl w bazie)
+3. Funkcja Break Even - przesuwanie SL na poziom BE+offset po osiągnięciu progu
+4. Analiza świeczka po świeczce z logami (można włączyć/wyłączyć w GUI)
+5. Eksport wyników do CSV
+
+STRUKTURA KATALOGÓW:
+===================
+E:\Trading\dziennik\python\pythonProject\venv\
+├── config/
+│   ├── __init__.py
+│   ├── database_config.py      # Konfiguracja połączeń do bazy (DB_PATH, AVAILABLE_INSTRUMENTS)
+│   └── field_definitions.py    # Definicje pól formularza
+├── database/
+│   ├── __init__.py
+│   ├── connection.py           # Zarządzanie połączeniami SQLite
+│   ├── models.py              # Modele danych (Position, Candle, TPCalculationResult)
+│   └── queries.py             # Zapytania SQL (PositionQueries, CandleQueries, TPCalculationQueries)
+├── gui/
+│   ├── __init__.py
+│   ├── main_window.py         # Główne okno aplikacji
+│   ├── data_viewer.py         # Przeglądarka transakcji
+│   ├── edit_dialog.py         # Okno edycji transakcji
+│   ├── tp_calculator.py       # *** GŁÓWNE OKNO KALKULATORA TP ***
+│   └── widgets/
+│       ├── __init__.py
+│       ├── custom_entries.py  # CustomEntry, SetupEntry, NumericEntry
+│       └── date_picker.py     # DateRangePicker, InstrumentSelector, StopLossSelector
+├── calculations/               # *** RDZEŃ APLIKACJI - OBLICZENIA TP ***
+│   ├── __init__.py
+│   ├── tp_calculator.py       # Główna logika kalkulacji TP, koordynuje cały proces
+│   ├── candle_analyzer.py     # *** ANALIZA ŚWIECZEK - TUTAJ SĄ ALGORYTMY TP ***
+│   └── position_analyzer.py   # Analiza pozycji, pobieranie danych z bazy
+├── utils/
+│   ├── __init__.py
+│   ├── date_utils.py          # Konwersje dat (unix_to_datetime, get_day_end_unix)
+│   └── formatting.py         # Formatowanie danych (format_points, format_price)
+├── main.py                    # Główny plik uruchomieniowy
+├── requirements.txt           # Zależności
+└── architektura.txt          # Ten plik
+
+KLUCZOWE PLIKI DO MODYFIKACJI:
+==============================
+
+1. calculations/candle_analyzer.py
+   *** NAJWAŻNIEJSZY PLIK - TUTAJ SĄ ALGORYTMY OBLICZANIA TP ***
+   - calculate_max_tp_basic() - obliczenia TP bez BE
+   - calculate_max_tp_with_be() - obliczenia TP z Break Even
+   - get_candles_for_position() - pobieranie świeczek z bazy
+   
+2. calculations/tp_calculator.py
+   - calculate_tp_for_date_range() - główna metoda kalkulacji dla zakresu dat
+   - _calculate_tp_for_position() - kalkulacja dla pojedynczej pozycji
+   
+3. gui/tp_calculator.py
+   - TPCalculatorWindow - główne okno GUI kalkulatora
+   - Parametry: daty, instrumenty, SL, BE, spread, detailed_logs
+
+BAZA DANYCH:
+============
+- SQLite z tabelami pozycji i świeczek
+- Pozycje: tabela 'positions' z polami ticket, open_time, type, symbol, open_price, sl, sl_recznie, etc.
+- Świeczki: tabele per instrument (np. "GER40.cash ", "XAUUSD") z polami time, open, high, low, close
+- Wyniki TP: tabela tp_calculation_results
+
+ALGORYTM KALKULACJI TP:
+=======================
+
+PODSTAWOWY (bez BE):
+1. Pobierz świeczki od 60s przed otwarciem pozycji do końca dnia
+2. Dla każdej świeczki sprawdź czy cena uderzyła w SL:
+   - BUY: czy candle.low <= stop_loss + spread
+   - SELL: czy candle.high >= stop_loss - spread
+3. Jeśli nie uderzył w SL, oblicz maksymalny zysk na tej świeczce
+4. Zapisz najwyższy zysk, zwróć go gdy SL zostanie uderzony
+
+Z BREAK EVEN:
+1. Podobnie jak podstawowy, ale dodatkowo sprawdzaj próg BE
+2. Gdy zysk >= prog_aktywacji_be, przesuń SL na open_price +/- be_offset
+3. *** WAŻNE: Gdy BE jest aktywowane na świeczce, nowy SL sprawdzany od NASTĘPNEJ świeczki ***
+4. Zwróć maksymalny TP osiągnięty przed uderzeniem w nowy SL
+
+OSTATNIE ZMIANY (GRUDZIEŃ 2024):
+================================
+✅ Poprawka: Program zaczyna obliczenia od świeczki otwarcia pozycji (nie od następnej)
+✅ Poprawka: Wyświetlanie wyników 0.0 gdy pozycja wybita na pierwszej świeczce
+✅ Dodano: Szczegółowe logi BE z informacjami o aktywacji i uderzeniu SL
+✅ Poprawka: BE - nowy SL sprawdzany dopiero od następnej świeczki po aktywacji
+✅ Dodano: Checkbox "Szczegółowe logi" w GUI do włączania/wyłączania logów świeczka po świeczce
+
+PROBLEMY I ROZWIĄZANIA:
+=======================
+
+Problem: Program zaczynał obliczenia od świeczki następującej po otwarciu pozycji
+Rozwiązanie: Zmieniono start_time na open_time - 60 w get_candles_for_position()
+
+Problem: Nie wyświetlały się wyniki 0.0 w GUI  
+Rozwiązanie: Zmieniono warunki z "if result.value" na "if result.value is not None"
+
+Problem: BE aktywowane i sprawdzane na tej samej świeczce
+Rozwiązanie: Dodano flagę be_activated_this_candle, SL sprawdzany od następnej świeczki
+
+Problem: Za dużo logów zaśmiecało konsolę
+Rozwiązanie: Dodano parametr detailed_logs w GUI i metodach
+
+WSKAZÓWKI ROZWOJU:
+==================
+- Główna logika w candle_analyzer.py
+- GUI w tp_calculator.py  
+- Testy zawsze na małym zakresie dat
+- detailed_logs=True dla debugowania
+- Sprawdzaj czy świeczki są pobierane prawidłowo (komunikaty o liczbie świeczek)
+- Zwracaj uwagę na konwersje: 1 punkt = 1.0 (nie dzielić przez 10000)
+
+URUCHOMIENIE:
+=============
+python main.py
+
+KONTAKT Z PROGRAMISTĄ:
+=====================
+Ten program był rozwijany we współpracy z Claude (Anthropic). 
+Przy dalszych modyfikacjach pokazać ten plik dla kontekstu.
+
+OSTATNIA AKTUALIZACJA: Grudzień 2024

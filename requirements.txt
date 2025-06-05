@@ -1,0 +1,17 @@
+# Wymagane biblioteki dla Dziennik Transakcji AI 3.0
+
+# GUI i kalendarze
+tkcalendar>=1.6.1
+
+# Bazy danych (sqlite3 jest w standardowej bibliotece Python)
+# sqlite3 - wbudowane w Python
+
+# Analiza danych i operacje na datach (wbudowane w Python)
+# datetime - wbudowane w Python
+# threading - wbudowane w Python
+# csv - wbudowane w Python
+
+# Inne przydatne biblioteki (opcjonalne)
+# pandas>=1.3.0  # Dla zaawansowanej analizy danych
+# numpy>=1.21.0  # Dla obliczeń numerycznych
+# matplotlib>=3.4.0  # Dla wykresów

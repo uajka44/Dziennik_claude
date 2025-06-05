@@ -1,0 +1,36 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.vscode/
+.idea/
+.spyderproject
+
+# Bazy danych (lokalne)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logi
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Stare wersje projektu
+Dziennik_AI*.py
+dziennik_claude*.rar
+
+# Tymczasowe pliki
+*.tmp
+*.temp
