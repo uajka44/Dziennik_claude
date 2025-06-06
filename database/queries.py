@@ -23,6 +23,21 @@ class PositionQueries:
         """
     
     @staticmethod
+    def get_positions_by_date_range_and_symbol(columns=None):
+        """Zapytanie pobierające pozycje z zakresu dat dla konkretnego instrumentu"""
+        if columns is None:
+            columns = "*"
+        elif isinstance(columns, list):
+            columns = ", ".join(columns)
+            
+        return f"""
+        SELECT {columns}
+        FROM {POSITIONS_TABLE} 
+        WHERE open_time BETWEEN ? AND ? AND symbol = ?
+        ORDER BY open_time
+        """
+    
+    @staticmethod
     def update_position():
         """Zapytanie aktualizujące pozycję"""
         return f"UPDATE {POSITIONS_TABLE} SET {{}} WHERE ticket = ?"

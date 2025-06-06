@@ -19,33 +19,14 @@ Zrefaktoryzowana i rozszerzona aplikacja do zarządzania dziennikiem transakcji 
 
 ## 📁 Struktura projektu
 
-```
-📦 venv/
-├── 📁 config/              # Konfiguracja
-│   ├── database_config.py  # Ustawienia bazy danych
-│   └── field_definitions.py # Definicje pól formularza
-├── 📁 database/            # Warstwa danych
-│   ├── connection.py       # Zarządzanie połączeniami
-│   ├── models.py          # Modele danych
-│   └── queries.py         # Zapytania SQL
-├── 📁 gui/                # Interfejs użytkownika
-│   ├── main_window.py     # Główne okno z menu
-│   ├── data_viewer.py     # Przeglądarka transakcji
-│   ├── tp_calculator.py   # 🆕 Kalkulator TP
-│   └── 📁 widgets/        # Komponenty GUI
-│       ├── custom_entries.py
-│       └── date_picker.py
-├── 📁 calculations/       # Logika biznesowa
-│   ├── tp_calculator.py   # Główna logika kalkulacji TP
-│   ├── candle_analyzer.py # Analiza świeczek
-│   └── position_analyzer.py # Analiza pozycji
-├── 📁 utils/             # Narzędzia pomocnicze
-│   ├── date_utils.py     # Konwersje dat
-│   └── formatting.py    # Formatowanie danych
-├── main.py              # 🚀 Główny plik uruchomieniowy
-├── requirements.txt     # Zależności
-└── README.md           # Ten plik
-```
+Aplikacja ma modularną architekturę z podziałem na:
+- **config/** - konfiguracja bazy danych i definicje pól
+- **database/** - warstwa dostępu do danych
+- **gui/** - interfejs użytkownika z menu i kalkulatorem
+- **calculations/** - rdzeń aplikacji z algorytmami TP
+- **utils/** - narzędzia pomocnicze
+
+> 📋 **Szczegółowa struktura katalogów** dostępna w pliku `architektura.txt`
 
 ## 🚀 Uruchomienie
 
@@ -140,6 +121,10 @@ pip install tkcalendar
 2. **Dane**: Aplikacja używa tej samej bazy danych
 3. **Uruchomienie**: Użyj nowego `main.py`
 4. **Konfiguracja**: Sprawdź ustawienia w katalogu `config/`
+
+## 👨‍💻 Dla programistów
+
+Szczegółowa dokumentacja techniczna, architektura systemu, algorytmy kalkulacji i wskazówki rozwoju dostępne w pliku **`architektura.txt`**
 
 ## 🚧 Przyszłe rozszerzenia
 

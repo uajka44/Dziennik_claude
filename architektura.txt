@@ -1,20 +1,24 @@
 APLIKACJA: DZIENNIK TRANSAKCJI AI 3.0 - ARCHITEKTURA I DOKUMENTACJA
 ===========================================================================
 
-OPIS PROGRAMU:
---------------
+UWAGA: Ten plik jest uzupełnieniem README.md - skierowany do programistów i AI
+Dla ogólnego opisu funkcjonalności i instrukcji użytkownika zobacz README.md
+
+OPIS TECHNICZNY:
+----------------
 Aplikacja służy do analizy transakcji tradingowych z możliwością obliczania maksymalnego Take Profit dla pozycji przed uderzeniem Stop Loss. Program analizuje dane świeczkowe (OHLC) z bazy SQLite i oblicza różne scenariusze TP, w tym z funkcją Break Even.
 
-GŁÓWNE FUNKCJONALNOŚCI:
------------------------
-1. Przeglądanie i edycja transakcji z bazy danych
-2. Kalkulator maksymalnego Take Profit z 3 trybami:
-   - SL stały (użytkownik podaje wartość SL w punktach)
-   - SL ręczne (z pola sl_recznie w bazie)
-   - SL z bazy (z pola sl w bazie)
-3. Funkcja Break Even - przesuwanie SL na poziom BE+offset po osiągnięciu progu
-4. Analiza świeczka po świeczce z logami (można włączyć/wyłączyć w GUI)
-5. Eksport wyników do CSV
+> Szczegółowy opis funkcjonalności dla użytkowników dostępny w README.md
+
+KOMPONENTY TECHNICZNE:
+----------------------
+1. GUI z tkinter - główne okno, przeglądarka, kalkulator TP
+2. Warstwa dostępu do danych SQLite z modelami i zapytaniami
+3. Algorytmy kalkulacji TP z analizą świeczkową
+4. System Break Even z przesuwaniem SL
+5. Eksport wyników i szczegółowe logowanie
+
+> Szczegółowy opis funkcjonalności dostępny w README.md
 
 STRUKTURA KATALOGÓW:
 ===================

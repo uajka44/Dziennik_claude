@@ -10,11 +10,185 @@ from config.field_definitions import (
     TEXT_FIELDS, CHECKBOX_FIELDS, ALL_FIELDS, COLUMNS, 
     COLUMN_HEADERS, COLUMN_WIDTHS, COLUMN_ALIGNMENTS, SETUP_SHORTCUTS
 )
+from config.database_config import AVAILABLE_INSTRUMENTS
 from database.connection import execute_query, execute_update
 from database.queries import PositionQueries
 from gui.widgets.custom_entries import SetupEntry
 from utils.date_utils import date_range_to_unix, format_time_for_display
 from utils.formatting import format_profit_points, format_checkbox_value
+
+
+class CheckboxDropdown:
+    """Rozwijana lista z checkboxami"""
+    
+    def __init__(self, parent, callback=None):
+        self.parent = parent
+        self.callback = callback
+        self.is_open = False
+        self.items = {}
+        self.variables = {}
+        
+        # Główny frame
+        self.main_frame = ttk.Frame(parent)
+        
+        # Przycisk rozwijający
+        self.button_frame = ttk.Frame(self.main_frame)
+        self.button_frame.pack(fill="x")
+        
+        self.display_var = tk.StringVar(value="Symbole")
+        self.dropdown_button = ttk.Button(
+            self.button_frame,
+            textvariable=self.display_var,
+            command=self._toggle_dropdown,
+            width=20
+        )
+        self.dropdown_button.pack(side="left", fill="x", expand=True)
+        
+        # Strzałka
+        self.arrow_label = ttk.Label(self.button_frame, text="▼", width=3)
+        self.arrow_label.pack(side="right")
+        
+        # Popup z checkboxami
+        self.popup = None
+        
+    def add_item(self, key, text, checked=True):
+        """Dodaje element do listy"""
+        var = tk.BooleanVar(value=checked)
+        self.variables[key] = var
+        self.items[key] = {
+            'text': text,
+            'var': var,
+            'checkbox': None
+        }
+        var.trace('w', self._on_item_changed)
+        
+    def _toggle_dropdown(self):
+        """Przełącza widoczność listy rozwijanej"""
+        if self.is_open:
+            self._close_dropdown()
+        else:
+            self._open_dropdown()
+            
+    def _open_dropdown(self):
+        """Otwiera listę rozwijaną"""
+        if self.popup:
+            return
+            
+        self.is_open = True
+        self.arrow_label.config(text="▲")
+        
+        # Twórz popup
+        self.popup = tk.Toplevel(self.main_frame)
+        self.popup.wm_overrideredirect(True)
+        self.popup.wm_attributes("-topmost", True)
+        
+        # Pozycjonowanie
+        x = self.dropdown_button.winfo_rootx()
+        y = self.dropdown_button.winfo_rooty() + self.dropdown_button.winfo_height()
+        self.popup.geometry(f"+{x}+{y}")
+        
+        # Frame dla checkboxów
+        popup_frame = ttk.Frame(self.popup, relief="solid", borderwidth=1)
+        popup_frame.pack(fill="both", expand=True, padx=1, pady=1)
+        
+        # "Wszystkie" checkbox
+        self.all_var = tk.BooleanVar(value=True)
+        all_cb = ttk.Checkbutton(
+            popup_frame,
+            text="Wszystkie",
+            variable=self.all_var,
+            command=self._on_all_changed
+        )
+        all_cb.pack(anchor="w", padx=5, pady=2)
+        
+        # Separator
+        ttk.Separator(popup_frame, orient="horizontal").pack(fill="x", padx=5, pady=2)
+        
+        # Checkboxy dla poszczególnych elementów
+        for key, item in self.items.items():
+            cb = ttk.Checkbutton(
+                popup_frame,
+                text=item['text'],
+                variable=item['var'],
+                command=self._on_item_changed
+            )
+            cb.pack(anchor="w", padx=5, pady=1)
+            item['checkbox'] = cb
+            
+        # Obsługa zamykania
+        self.popup.bind("<FocusOut>", self._on_focus_out)
+        self.popup.bind("<Button-1>", self._on_click_outside)
+        self.popup.focus_set()
+        
+        # Aktualizuj tekst na przycisku
+        self._update_display()
+        
+    def _close_dropdown(self):
+        """Zamyka listę rozwijaną"""
+        self.is_open = False
+        self.arrow_label.config(text="▼")
+        
+        if self.popup:
+            self.popup.destroy()
+            self.popup = None
+            
+    def _on_focus_out(self, event):
+        """Zamyka dropdown po utracie fokusu"""
+        # Sprawdź czy focus nie przeszedł na element wewnątrz popup
+        if event.widget == self.popup:
+            self.main_frame.after(100, self._close_dropdown)
+            
+    def _on_click_outside(self, event):
+        """Zamyka dropdown po kliknięciu poza nim"""
+        pass  # Checkboxy mają własną obsługę
+        
+    def _on_all_changed(self):
+        """Obsługa zmiany 'Wszystkie'"""
+        all_checked = self.all_var.get()
+        
+        # Ustaw wszystkie checkboxy
+        for item in self.items.values():
+            item['var'].set(all_checked)
+            
+        self._update_display()
+        if self.callback:
+            self.callback()
+            
+    def _on_item_changed(self, *args):
+        """Obsługa zmiany konkretnego elementu"""
+        # Sprawdź czy wszystkie są zaznaczone
+        all_checked = all(item['var'].get() for item in self.items.values())
+        self.all_var.set(all_checked)
+        
+        self._update_display()
+        if self.callback:
+            self.callback()
+            
+    def _update_display(self):
+        """Aktualizuje tekst na przycisku"""
+        checked_count = sum(1 for item in self.items.values() if item['var'].get())
+        total_count = len(self.items)
+        
+        if checked_count == 0:
+            text = "Brak wybranych"
+        elif checked_count == total_count:
+            text = "Wszystkie"
+        else:
+            text = f"{checked_count}/{total_count} wybranych"
+            
+        self.display_var.set(text)
+        
+    def get_selected(self):
+        """Zwraca listę wybranych kluczy"""
+        return [key for key, item in self.items.items() if item['var'].get()]
+        
+    def grid(self, **kwargs):
+        """Umieszcza widget w grid"""
+        self.main_frame.grid(**kwargs)
+        
+    def pack(self, **kwargs):
+        """Umieszcza widget przez pack"""
+        self.main_frame.pack(**kwargs)
 
 
 class DataViewer:
@@ -30,6 +204,33 @@ class DataViewer:
     
     def _create_widgets(self):
         """Tworzy wszystkie widgety"""
+        
+        # === SEKCJA FILTRÓW ===
+        self.filter_frame = ttk.LabelFrame(self.parent, text="Filtry")
+        self.filter_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Filtr instrumentów - rozwijana lista z checkboxami
+        ttk.Label(self.filter_frame, text="Instrumenty:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        
+        # Custom rozwijana lista z checkboxami
+        self.instruments_dropdown = CheckboxDropdown(self.filter_frame, callback=self.load_data)
+        self.instruments_dropdown.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        
+        # Załaduj symbole i dodaj do dropdown
+        self._load_available_symbols()
+        
+        # Przyciski diagnostyczne
+        ttk.Button(
+            self.filter_frame, 
+            text="Diagnostyka symbolów", 
+            command=self._show_symbol_diagnostics
+        ).grid(row=1, column=0, padx=5, pady=5)
+        
+        ttk.Button(
+            self.filter_frame, 
+            text="Quick diagnostyka (konsola)", 
+            command=self._quick_diagnostics
+        ).grid(row=1, column=1, padx=5, pady=5)
         
         # === SEKCJA WYBORU DAT ===
         self.date_frame = ttk.LabelFrame(self.parent, text="Zakres dat")
@@ -114,6 +315,188 @@ class DataViewer:
         self._set_today()
         self.load_data()
     
+    def _load_available_symbols(self):
+        """Pobiera unikalne symbole z bazy danych i dodaje do dropdown"""
+        try:
+            # Pobierz unikalne symbole z bazy - uporządkowane i oczyszczone
+            query = "SELECT DISTINCT symbol FROM positions ORDER BY symbol"
+            rows = execute_query(query)
+            raw_symbols = [row[0] for row in rows if row[0]]  # Filtruj puste wartości
+            
+            # Grupuj symbole - usuń duplikaty spowodowane \x00
+            clean_symbols = {}
+            for symbol in raw_symbols:
+                # Usuń \x00 z końca dla porównania
+                clean_symbol = symbol.rstrip('\x00')
+                if clean_symbol not in clean_symbols:
+                    clean_symbols[clean_symbol] = []
+                clean_symbols[clean_symbol].append(symbol)
+            
+            print(f"Znalezione symbole: {clean_symbols}")
+            
+            # Dodaj symbole do dropdown
+            for clean_symbol, original_symbols in clean_symbols.items():
+                self.instruments_dropdown.add_item(
+                    clean_symbol, 
+                    clean_symbol.upper(), 
+                    checked=True
+                )
+                # Przechowuj również mapowanie do oryginalnych symbolów
+                setattr(self, f'_original_symbols_{clean_symbol}', original_symbols)
+                    
+            print(f"Załadowano {len(clean_symbols)} unikalnych symbolów do dropdown: {list(clean_symbols.keys())}")
+            
+        except Exception as e:
+            print(f"Błąd podczas ładowania symbolów: {e}")
+            messagebox.showerror("Błąd", f"Nie można załadować symbolów z bazy: {e}")
+    
+
+    def _show_symbol_diagnostics(self):
+        """Pokazuje diagnostykę symbolów z bazy danych"""
+        try:
+            # Pobierz wszystkie symbole z bazy (nie unikalne)
+            query = "SELECT symbol, COUNT(*) as count FROM positions GROUP BY symbol ORDER BY symbol"
+            rows = execute_query(query)
+            
+            # Stwórz okno diagnostyczne
+            diag_window = tk.Toplevel(self.parent)
+            diag_window.title("Diagnostyka symbolów")
+            diag_window.geometry("600x400")
+            
+            # Text widget z scrollbarem
+            text_frame = ttk.Frame(diag_window)
+            text_frame.pack(fill="both", expand=True, padx=10, pady=10)
+            
+            text_widget = tk.Text(text_frame, wrap=tk.WORD)
+            scrollbar = ttk.Scrollbar(text_frame, orient="vertical", command=text_widget.yview)
+            text_widget.configure(yscrollcommand=scrollbar.set)
+            
+            text_widget.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+            
+            # Analiza symbolów
+            content = "=== DIAGNOSTYKA SYMBOLÓW Z BAZY DANYCH ===\n\n"
+            content += f"Znaleziono {len(rows)} unikalnych symbolów:\n\n"
+            
+            for symbol, count in rows:
+                # Szczegółowa analiza symbolu
+                repr_symbol = repr(symbol)  # Pokaże ukryte znaki
+                length = len(symbol) if symbol else 0
+                
+                content += f"Symbol: {symbol}\n"
+                content += f"  Reprezentacja: {repr_symbol}\n"
+                content += f"  Długość: {length} znaków\n"
+                content += f"  Liczba transakcji: {count}\n"
+                
+                # Sprawdź czy pasuje do AVAILABLE_INSTRUMENTS
+                matches = []
+                for avail in AVAILABLE_INSTRUMENTS:
+                    if symbol and (symbol.lower() == avail.lower() or symbol.upper() == avail.upper()):
+                        matches.append(avail)
+                
+                if matches:
+                    content += f"  Pasuje do: {matches}\n"
+                else:
+                    content += f"  \u26a0\ufe0f BRAK DOPASOWANIA w AVAILABLE_INSTRUMENTS\n"
+                
+                content += "\n"
+            
+            content += "\n=== AVAILABLE_INSTRUMENTS (konfiguracja) ===\n\n"
+            for instr in AVAILABLE_INSTRUMENTS:
+                content += f"  {instr}\n"
+            
+            # Wyświetl treść
+            text_widget.insert("1.0", content)
+            text_widget.config(state="disabled")  # Tylko do odczytu
+            
+            # Przyciski
+            button_frame = ttk.Frame(diag_window)
+            button_frame.pack(fill="x", padx=10, pady=10)
+            
+            def save_to_file():
+                """Zapisuje diagnostykę do pliku"""
+                try:
+                    from tkinter import filedialog
+                    filename = filedialog.asksaveasfilename(
+                        defaultextension=".txt",
+                        filetypes=[("Pliki tekstowe", "*.txt"), ("Wszystkie pliki", "*.*")],
+                        title="Zapisz diagnostykę jako..."
+                    )
+                    
+                    if filename:
+                        with open(filename, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                        messagebox.showinfo("Sukces", f"Diagnostyka zapisana do:\n{filename}")
+                except Exception as e:
+                    messagebox.showerror("Błąd", f"Nie można zapisać pliku: {e}")
+            
+            def copy_to_clipboard():
+                """Kopiuje diagnostykę do schowka"""
+                try:
+                    diag_window.clipboard_clear()
+                    diag_window.clipboard_append(content)
+                    messagebox.showinfo("Sukces", "Diagnostyka skopiowana do schowka!")
+                except Exception as e:
+                    messagebox.showerror("Błąd", f"Nie można skopiować do schowka: {e}")
+            
+            # Dodaj przyciski
+            ttk.Button(button_frame, text="Zapisz do pliku", command=save_to_file).pack(side="left", padx=5)
+            ttk.Button(button_frame, text="Kopiuj do schowka", command=copy_to_clipboard).pack(side="left", padx=5)
+            ttk.Button(button_frame, text="Zamknij", command=diag_window.destroy).pack(side="right", padx=5)
+            
+            # Dodaj również wydruk do konsoli
+            print("\n" + "="*60)
+            print(content)
+            print("="*60 + "\n")
+            
+        except Exception as e:
+            messagebox.showerror("Błąd", f"Błąd diagnostyki: {e}")
+    
+    def _quick_diagnostics(self):
+        """Szybka diagnostyka - tylko wydruk do konsoli"""
+        try:
+            print("\n" + "="*80)
+            print("QUICK DIAGNOSTYKA SYMBOLÓW - WYNIKI W KONSOLI")
+            print("="*80)
+            
+            # Pobierz symbole z bazy
+            query = "SELECT symbol, COUNT(*) as count FROM positions GROUP BY symbol ORDER BY symbol"
+            rows = execute_query(query)
+            
+            print(f"\nZnaleziono {len(rows)} unikalnych symbolów w bazie:\n")
+            
+            for symbol, count in rows:
+                print(f"Symbol: '{symbol}'")
+                print(f"  repr(): {repr(symbol)}")
+                print(f"  len(): {len(symbol) if symbol else 0}")
+                print(f"  transakcje: {count}")
+                
+                # Sprawdź dopasowania
+                matches = []
+                for avail in AVAILABLE_INSTRUMENTS:
+                    if symbol and (symbol.lower() == avail.lower() or symbol.upper() == avail.upper()):
+                        matches.append(avail)
+                
+                if matches:
+                    print(f"  STATUS: ✅ PASUJE do {matches}")
+                else:
+                    print(f"  STATUS: ❌ BRAK DOPASOWANIA!")
+                print()
+            
+            print("AVAILABLE_INSTRUMENTS z konfiguracji:")
+            for instr in AVAILABLE_INSTRUMENTS:
+                print(f"  '{instr}'")
+            
+            print("\n" + "="*80)
+            print("KONIEC DIAGNOSTYKI - skopiuj powyższe wyniki")
+            print("="*80 + "\n")
+            
+            messagebox.showinfo("Diagnostyka", "Wyniki wyświetlone w konsoli!\nSkopiuj z okna terminala.")
+            
+        except Exception as e:
+            print(f"Błąd quick diagnostyki: {e}")
+            messagebox.showerror("Błąd", f"Błąd diagnostyki: {e}")
+    
     def _set_today(self):
         """Ustawia daty na dzisiejszy dzień"""
         today = date.today()
@@ -121,7 +504,7 @@ class DataViewer:
         self.end_date_entry.set_date(today)
     
     def load_data(self):
-        """Ładuje dane z bazy danych dla podanego zakresu dat"""
+        """Ładuje dane z bazy danych dla podanego zakresu dat i wybranych instrumentów"""
         start_date = self.start_date_entry.get()
         end_date = self.end_date_entry.get()
 
@@ -136,10 +519,47 @@ class DataViewer:
             self.tree.delete(item)
 
         try:
-            # Dynamiczne generowanie zapytania SQL na podstawie zdefiniowanych kolumn
+            # Sprawdzenie które instrumenty są wybrane z dropdown
+            selected_symbols = self.instruments_dropdown.get_selected()
+            
+            if not selected_symbols:
+                # Jeśli żaden nie jest zaznaczony, nie pokazuj nic
+                self.total_profit_label.config(text="0.00")
+                self.transactions_count_label.config(text="0")
+                return
+            
+            # Sprawdź czy wszystkie są wybrane
+            all_symbols_count = len(self.instruments_dropdown.items)
+            all_selected = len(selected_symbols) == all_symbols_count
+            
+            # Dynamiczne generowanie zapytania SQL
             columns_str = ", ".join(COLUMNS)
-            query = self.position_queries.get_positions_by_date_range(columns_str)
-            rows = execute_query(query, (start_unix, end_unix))
+            
+            if all_selected:
+                # Wszystkie instrumenty
+                query = self.position_queries.get_positions_by_date_range(columns_str)
+                rows = execute_query(query, (start_unix, end_unix))
+            else:
+                # Wybrane instrumenty - uwzględnij oba formaty (z i bez \x00)
+                expanded_symbols = []
+                for clean_symbol in selected_symbols:
+                    expanded_symbols.append(clean_symbol)  # Oryginalny format
+                    expanded_symbols.append(clean_symbol + '\x00')  # Format z null character
+                
+                placeholders = ", ".join(["?" for _ in expanded_symbols])
+                query = f"""
+                SELECT {columns_str}
+                FROM positions 
+                WHERE open_time BETWEEN ? AND ? AND symbol IN ({placeholders})
+                ORDER BY open_time
+                """
+                params = [start_unix, end_unix] + expanded_symbols
+                rows = execute_query(query, params)
+            
+            print(f"Pobrano {len(rows)} transakcji dla wybranych filtrów")
+            print(f"Wybrane symbole: {selected_symbols if not all_selected else 'wszystkie'}")
+            if not all_selected:
+                print(f"Rozszerzone symbole (z \\x00): {expanded_symbols}")
 
             # Przygotowanie zmiennych do obliczenia sumy profitu
             total_profit = 0.0
@@ -170,11 +590,12 @@ class DataViewer:
             self.transactions_count_label.config(text=f"{transaction_count}")
 
             if not rows:
-                messagebox.showinfo("Informacja", "Brak danych dla podanego zakresu dat.")
+                messagebox.showinfo("Informacja", "Brak danych dla podanych filtrów.")
                 self.total_profit_label.config(text="0.00")
                 self.transactions_count_label.config(text="0")
 
         except Exception as e:
+            print(f"Błąd bazy danych: {e}")
             messagebox.showerror("Błąd bazy danych", f"Wystąpił błąd podczas ładowania danych: {e}")
     
     def edit_item(self, event):
