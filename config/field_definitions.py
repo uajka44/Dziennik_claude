@@ -45,7 +45,8 @@ CHECKBOX_FIELDS = [
     FormField("ucieczka", "Ucieczka", field_type="checkbox"),
     FormField("Korekta", "korekta", field_type="checkbox"),
     FormField("chcetrzymac", "chcetrzymac", field_type="checkbox"),
-    FormField("be", "BE", field_type="checkbox")
+    FormField("be", "BE", field_type="checkbox"),
+    FormField("skalp", "Skalp", field_type="checkbox")
 ]
 
 # Kombinowane pole wszystkich pól dla łatwiejszego dostępu
