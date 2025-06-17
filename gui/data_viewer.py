@@ -194,9 +194,8 @@ class CheckboxDropdown:
 class DataViewer:
     """Przeglądarka danych transakcji"""
     
-    def __init__(self, parent, db_path):
+    def __init__(self, parent):
         self.parent = parent
-        self.db_path = db_path
         self.position_queries = PositionQueries()
         
         self._create_widgets()

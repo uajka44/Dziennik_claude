@@ -8,20 +8,13 @@ import os
 # Dodaj ścieżkę do modułów
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-try:
-    from gui.main_window import MainWindow
-    from tkinter import messagebox
-except ImportError as e:
-    print(f"Błąd importu: {e}")
-    print("Sprawdź czy wszystkie wymagane moduły są zainstalowane:")
-    print("- tkinter")
-    print("- tkcalendar")
-    sys.exit(1)
-
-
 def main():
     """Funkcja główna aplikacji"""
     try:
+        # Import głównego okna
+        from gui.main_window import MainWindow
+        from tkinter import messagebox
+        
         # Tworzenie głównego okna
         root = tk.Tk()
         
@@ -54,12 +47,33 @@ def main():
         # Uruchomienie głównej pętli aplikacji
         root.mainloop()
         
+    except ImportError as e:
+        print(f"Błąd importu: {e}")
+        print("Sprawdź czy wszystkie wymagane moduły są zainstalowane:")
+        print("- tkinter")
+        print("- tkcalendar")
+        try:
+            from tkinter import messagebox
+            root = tk.Tk()
+            root.withdraw()  # Ukryj główne okno
+            messagebox.showerror(
+                "Błąd importu",
+                f"Nie można załadować niezbędnych modułów:\n{e}\n\nSprawdź instalację wymaganych bibliotek."
+            )
+            root.destroy()
+        except:
+            pass
+        sys.exit(1)
     except Exception as e:
         print(f"Błąd podczas uruchamiania aplikacji: {e}")
-        messagebox.showerror(
-            "Błąd krytyczny", 
-            f"Nie można uruchomić aplikacji:\n{e}\n\nSprawdź konfigurację i spróbuj ponownie."
-        )
+        try:
+            from tkinter import messagebox
+            messagebox.showerror(
+                "Błąd krytyczny", 
+                f"Nie można uruchomić aplikacji:\n{e}\n\nSprawdź konfigurację i spróbuj ponownie."
+            )
+        except:
+            pass
         sys.exit(1)
 
 
