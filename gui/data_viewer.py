@@ -274,6 +274,19 @@ class DataViewer:
         self.transactions_count_label = ttk.Label(self.summary_frame, text="0")
         self.transactions_count_label.grid(row=1, column=1, padx=5, pady=2, sticky="w")
 
+        # Dodajemy statystykę winrate
+        ttk.Label(self.summary_frame, text="Wygrywające trejdy:").grid(row=2, column=0, padx=5, pady=2, sticky="w")
+        self.winning_trades_label = ttk.Label(self.summary_frame, text="0")
+        self.winning_trades_label.grid(row=2, column=1, padx=5, pady=2, sticky="w")
+
+        ttk.Label(self.summary_frame, text="Przegrywające trejdy:").grid(row=3, column=0, padx=5, pady=2, sticky="w")
+        self.losing_trades_label = ttk.Label(self.summary_frame, text="0")
+        self.losing_trades_label.grid(row=3, column=1, padx=5, pady=2, sticky="w")
+
+        ttk.Label(self.summary_frame, text="Winrate:").grid(row=4, column=0, padx=5, pady=2, sticky="w")
+        self.winrate_label = ttk.Label(self.summary_frame, text="0.00%")
+        self.winrate_label.grid(row=4, column=1, padx=5, pady=2, sticky="w")
+
         # === SEKCJA TABELI ===
         self.tree_frame = ttk.Frame(self.parent)
         self.tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -526,6 +539,9 @@ class DataViewer:
                 # Jeśli żaden nie jest zaznaczony, nie pokazuj nic
                 self.total_profit_label.config(text="0.00")
                 self.transactions_count_label.config(text="0")
+                self.winning_trades_label.config(text="0")
+                self.losing_trades_label.config(text="0")
+                self.winrate_label.config(text="0.00%")
                 return
             
             # Sprawdź czy wszystkie są wybrane
@@ -561,13 +577,17 @@ class DataViewer:
             if not all_selected:
                 print(f"Rozszerzone symbole (z \\x00): {expanded_symbols}")
 
-            # Przygotowanie zmiennych do obliczenia sumy profitu
+            # Przygotowanie zmiennych do obliczenia sumy profitu i statystyk
             total_profit = 0.0
             transaction_count = len(rows)
+            winning_trades = 0
+            losing_trades = 0
 
             # Wypełnianie tabeli danymi
             for row in rows:
                 display_values = []
+                current_profit = None
+                
                 for i, col in enumerate(COLUMNS):
                     value = row[i]
 
@@ -575,6 +595,7 @@ class DataViewer:
                         display_values.append(format_time_for_display(value))
                     elif col == "profit_points":
                         adjusted_value = value / 100 if value is not None else None
+                        current_profit = adjusted_value
                         if adjusted_value is not None:
                             total_profit += adjusted_value
                         display_values.append(format_profit_points(value))
@@ -582,17 +603,35 @@ class DataViewer:
                         display_values.append(format_checkbox_value(value))
                     else:
                         display_values.append(value or "")
+                
+                # Obliczanie statystyk winrate na podstawie profitu
+                if current_profit is not None:
+                    if current_profit > 0:
+                        winning_trades += 1
+                    elif current_profit < 0:
+                        losing_trades += 1
+                    # Ignorujemy transakcje z profilem = 0 (Break Even)
 
                 self.tree.insert("", "end", values=tuple(display_values))
+
+            # Obliczanie winrate
+            total_counted_trades = winning_trades + losing_trades
+            winrate = (winning_trades / total_counted_trades * 100) if total_counted_trades > 0 else 0.0
 
             # Aktualizacja etykiet z podsumowaniem
             self.total_profit_label.config(text=f"{total_profit:.2f}")
             self.transactions_count_label.config(text=f"{transaction_count}")
+            self.winning_trades_label.config(text=f"{winning_trades}")
+            self.losing_trades_label.config(text=f"{losing_trades}")
+            self.winrate_label.config(text=f"{winrate:.2f}%")
 
             if not rows:
                 messagebox.showinfo("Informacja", "Brak danych dla podanych filtrów.")
                 self.total_profit_label.config(text="0.00")
                 self.transactions_count_label.config(text="0")
+                self.winning_trades_label.config(text="0")
+                self.losing_trades_label.config(text="0")
+                self.winrate_label.config(text="0.00%")
 
         except Exception as e:
             print(f"Błąd bazy danych: {e}")

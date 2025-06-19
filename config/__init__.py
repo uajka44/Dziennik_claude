@@ -1,1 +1,1 @@
-# Configuration package
+# Configuration package for trading journal application

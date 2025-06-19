@@ -61,7 +61,7 @@ class TPCalculator:
                                   end_date: str,
                                   instruments: List[str],
                                   sl_types: Dict[str, bool],
-                                  sl_staly_value: Optional[float] = None,
+                                  sl_staly_values: Optional[Dict[str, float]] = None,
                                   be_prog: Optional[float] = None,
                                   be_offset: Optional[float] = None,
                                   spread: float = 0,
@@ -99,7 +99,7 @@ class TPCalculator:
             # Oblicz TP dla tej pozycji
             try:
                 tp_result = self._calculate_tp_for_position(
-                    position, sl_types, sl_staly_value, be_prog, be_offset, spread, detailed_logs
+                    position, sl_types, sl_staly_values, be_prog, be_offset, spread, detailed_logs
                 )
                 
                 if tp_result:
@@ -129,7 +129,7 @@ class TPCalculator:
     def _calculate_tp_for_position(self,
                                  position: Position,
                                  sl_types: Dict[str, bool],
-                                 sl_staly_value: Optional[float],
+                                 sl_staly_values: Optional[Dict[str, float]],
                                  be_prog: Optional[float],
                                  be_offset: Optional[float],
                                  spread: float,
@@ -158,7 +158,7 @@ class TPCalculator:
         
         # Pobierz stop lossy
         stop_losses = self.position_analyzer.get_position_stop_losses(
-            position, sl_staly_value
+            position, sl_staly_values
         )
         print(f"TPCalculator: Stop losses dla pozycji {position.ticket}: {stop_losses}")
         

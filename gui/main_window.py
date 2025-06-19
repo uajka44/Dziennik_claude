@@ -41,6 +41,7 @@ class MainWindow:
         tools_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Narzędzia", menu=tools_menu)
         tools_menu.add_command(label="Kalkulator TP", command=self._open_tp_calculator)
+        tools_menu.add_command(label="Tickety instrumentów", command=self._open_instrument_tickets)
         tools_menu.add_separator()
         tools_menu.add_command(label="Ustawienia", command=self._open_settings)
         
@@ -96,6 +97,17 @@ class MainWindow:
             messagebox.showerror(
                 "Błąd", 
                 f"Nie można otworzyć kalkulatora TP:\n{e}"
+            )
+    
+    def _open_instrument_tickets(self):
+        """Otwiera okno mapowania ticketów instrumentów"""
+        try:
+            from gui.instrument_tickets import InstrumentTicketsWindow
+            InstrumentTicketsWindow(self.root)
+        except Exception as e:
+            messagebox.showerror(
+                "Błąd", 
+                f"Nie można otworzyć okna ticketów instrumentów:\n{e}"
             )
     
     def _export_data(self):

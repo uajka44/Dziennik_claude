@@ -39,21 +39,30 @@ class TPCalculatorWindow:
         params_frame = ttk.LabelFrame(main_frame, text="Parametry kalkulacji")
         params_frame.pack(fill="x", pady=(0, 10))
         
-        # Zakres dat
-        self.date_picker = DateRangePicker(params_frame)
-        self.date_picker.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        # PIERWSZY WIERSZ: Zakres dat
+        dates_frame = ttk.Frame(params_frame)
+        dates_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=10, pady=10)
         
-        # Instrumenty
-        self.instrument_selector = InstrumentSelector(params_frame, AVAILABLE_INSTRUMENTS)
-        self.instrument_selector.grid(row=0, column=1, padx=10, pady=10, sticky="nw")
+        self.date_picker = DateRangePicker(dates_frame)
+        self.date_picker.pack(side="left")
         
-        # Stop Loss
+        # DRUGI WIERSZ: Stop Loss types | Instrumenty | Break Even
+        # Stop Loss types
         self.sl_selector = StopLossSelector(params_frame)
         self.sl_selector.grid(row=1, column=0, padx=10, pady=10, sticky="nw")
         
-        # === SEKCJA BREAK EVEN ===
+        # Instrumenty
+        self.instrument_selector = InstrumentSelector(params_frame, AVAILABLE_INSTRUMENTS)
+        self.instrument_selector.grid(row=1, column=1, padx=10, pady=10, sticky="nw")
+        
+        # Break Even
         be_frame = ttk.LabelFrame(params_frame, text="Break Even")
-        be_frame.grid(row=1, column=1, padx=10, pady=10, sticky="nw")
+        be_frame.grid(row=1, column=2, padx=10, pady=10, sticky="nw")
+        
+        # Konfiguracja kolumn dla równego rozkładu
+        params_frame.columnconfigure(0, weight=1)
+        params_frame.columnconfigure(1, weight=1) 
+        params_frame.columnconfigure(2, weight=1)
         
         # BE Prog
         ttk.Label(be_frame, text="Próg BE:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
@@ -231,9 +240,8 @@ class TPCalculatorWindow:
         """Konfiguruje układ okna"""
         # Ustawienia domyślne
         self.instrument_selector.select_all()  # Zaznacz wszystkie instrumenty
-        self.sl_selector.sl_staly_var.set(True)  # Zaznacz SL stały
-        self.sl_selector.sl_staly_entry.set_float(10.0)  # Domyślny SL stały 10 pkt
-        self.sl_selector._toggle_sl_staly_entry()  # Włącz pole SL stały
+        
+        # Nie ustawiamy już ręcznie checkboxów SL stałego - są już z domyślnymi wartościami
         
         self.be_prog_entry.set_float(10.0)  # Domyślny BE prog 10 pkt
         self.be_offset_entry.set_float(1.0)  # Domyślny BE offset 1 pkt
@@ -293,15 +301,15 @@ class TPCalculatorWindow:
             start_date, end_date = self.date_picker.get_date_range()
             instruments = self.instrument_selector.get_selected_instruments()
             sl_types = self.sl_selector.get_selected_sl_types()
-            sl_staly_value = self.sl_selector.get_sl_staly_value()
+            sl_staly_values = self.sl_selector.get_sl_staly_values()  # Nowy: słownik per instrument
             be_prog = self.be_prog_entry.get_float()
             be_offset = self.be_offset_entry.get_float()
             spread = self.spread_entry.get_float() or 0
             save_to_db = self.save_to_db_var.get()
-            detailed_logs = self.detailed_logs_var.get()  # Nowy parametr
+            detailed_logs = self.detailed_logs_var.get()
             
             print(f"Parametry: daty={start_date}-{end_date}, instrumenty={instruments}")
-            print(f"SL typy: {sl_types}, SL stały: {sl_staly_value}")
+            print(f"SL typy: {sl_types}, SL stały values: {sl_staly_values}")
             
             # Wykonaj kalkulację
             print("Wywołuję kalkulator...")
@@ -310,12 +318,12 @@ class TPCalculatorWindow:
                 end_date=end_date,
                 instruments=instruments,
                 sl_types=sl_types,
-                sl_staly_value=sl_staly_value,
+                sl_staly_values=sl_staly_values,
                 be_prog=be_prog,
                 be_offset=be_offset,
                 spread=spread,
                 save_to_db=save_to_db,
-                detailed_logs=detailed_logs  # Przekazujemy nową opcję
+                detailed_logs=detailed_logs
             )
             
             print(f"Kalkulacja zakończona. Wyników: {len(self.results)}")

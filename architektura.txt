@@ -10,6 +10,19 @@ Aplikacja służy do analizy transakcji tradingowych z możliwością obliczania
 
 > Szczegółowy opis funkcjonalności dla użytkowników dostępny w README.md
 
+NOWE FUNKCJONALNOŚCI (CZERWIEC 2025):
+======================================
+✅ Statystyka winrate w głównym oknie - wyświetla liczbę wygrywających/przegrywających trejdów i winrate w %
+✅ SL stały per instrument - różne domyślne wartości SL dla różnych instrumentów
+✅ Konfiguracja SL w pliku config/sl_config.py:
+    - us30.cash: -20 pkt
+    - us100.cash, ger40.cash: -10 pkt
+    - XAUUSD: -5 pkt
+✅ System mapowania ticketów instrumentów:
+    - Okno "Tickety instrumentów" w menu Narzędzia
+    - Mapowanie różnych nazw (us100, nq100, nasdaq) na główne instrumenty (NASDAQ)
+    - Domyślne instrumenty: DAX, NASDAQ, DJ, GOLD, BTC
+
 KOMPONENTY TECHNICZNE:
 ----------------------
 1. GUI z tkinter - główne okno, przeglądarka, kalkulator TP
@@ -17,16 +30,21 @@ KOMPONENTY TECHNICZNE:
 3. Algorytmy kalkulacji TP z analizą świeczkową
 4. System Break Even z przesuwaniem SL
 5. Eksport wyników i szczegółowe logowanie
+6. ** NOWY ** Konfiguracja SL stałego per instrument
+7. ** NOWY ** Statystyki winrate w głównym oknie
+8. ** NOWY ** System mapowania ticketów instrumentów
 
 > Szczegółowy opis funkcjonalności dostępny w README.md
 
 STRUKTURA KATALOGÓW:
 ===================
-E:\Trading\dziennik\python\pythonProject\venv\
+E:\Trading\dziennik\python\Dziennik_claude\
 ├── config/
 │   ├── __init__.py
 │   ├── database_config.py      # Konfiguracja połączeń do bazy (DB_PATH, AVAILABLE_INSTRUMENTS)
-│   └── field_definitions.py    # Definicje pól formularza
+│   ├── field_definitions.py    # Definicje pól formularza
+│   ├── sl_config.py           # ** NOWY ** Konfiguracja SL stałego per instrument
+│   └── instrument_tickets_config.py # ** NOWY ** Mapowanie ticketów instrumentów
 ├── database/
 │   ├── __init__.py
 │   ├── connection.py           # Zarządzanie połączeniami SQLite
@@ -34,19 +52,20 @@ E:\Trading\dziennik\python\pythonProject\venv\
 │   └── queries.py             # Zapytania SQL (PositionQueries, CandleQueries, TPCalculationQueries)
 ├── gui/
 │   ├── __init__.py
-│   ├── main_window.py         # Główne okno aplikacji
-│   ├── data_viewer.py         # Przeglądarka transakcji
+│   ├── main_window.py         # ** ZAKTUALIZOWANY ** Główne okno aplikacji z menu Tickety instrumentów
+│   ├── data_viewer.py         # ** ZAKTUALIZOWANY ** Przeglądarka transakcji z winrate
 │   ├── edit_dialog.py         # Okno edycji transakcji
 │   ├── tp_calculator.py       # *** GŁÓWNE OKNO KALKULATORA TP ***
+│   ├── instrument_tickets.py  # ** NOWY ** Okno konfiguracji mapowania ticketów
 │   └── widgets/
 │       ├── __init__.py
 │       ├── custom_entries.py  # CustomEntry, SetupEntry, NumericEntry
-│       └── date_picker.py     # DateRangePicker, InstrumentSelector, StopLossSelector
+│       └── date_picker.py     # ** ZAKTUALIZOWANY ** DateRangePicker, InstrumentSelector, StopLossSelector
 ├── calculations/               # *** RDZEŃ APLIKACJI - OBLICZENIA TP ***
 │   ├── __init__.py
-│   ├── tp_calculator.py       # Główna logika kalkulacji TP, koordynuje cały proces
+│   ├── tp_calculator.py       # ** ZAKTUALIZOWANY ** Główna logika kalkulacji TP z obsługą SL per instrument
 │   ├── candle_analyzer.py     # *** ANALIZA ŚWIECZEK - TUTAJ SĄ ALGORYTMY TP ***
-│   └── position_analyzer.py   # Analiza pozycji, pobieranie danych z bazy
+│   └── position_analyzer.py   # ** ZAKTUALIZOWANY ** Analiza pozycji z obsługą SL per instrument
 ├── utils/
 │   ├── __init__.py
 │   ├── date_utils.py          # Konwersje dat (unix_to_datetime, get_day_end_unix)
@@ -137,4 +156,4 @@ KONTAKT Z PROGRAMISTĄ:
 Ten program był rozwijany we współpracy z Claude (Anthropic). 
 Przy dalszych modyfikacjach pokazać ten plik dla kontekstu.
 
-OSTATNIA AKTUALIZACJA: Grudzień 2024
+OSTATNIA AKTUALIZACJA: Czerwiec 2025 - Dodano statystyki winrate i SL per instrument

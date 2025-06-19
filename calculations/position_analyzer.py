@@ -4,6 +4,7 @@ Analiza pozycji tradingowych
 import sqlite3
 from database.queries import PositionQueries
 from config.database_config import DB_PATH
+from config.sl_config import get_default_sl_for_instrument
 from database.models import Position
 from typing import List, Optional, Dict
 from utils.date_utils import date_range_to_unix
@@ -145,13 +146,14 @@ class PositionAnalyzer:
             be=None
         )
     
-    def get_position_stop_losses(self, position: Position, sl_staly: Optional[float] = None) -> Dict[str, Optional[float]]:
+    def get_position_stop_losses(self, position: Position, 
+                                 sl_staly_values: Optional[Dict[str, float]] = None) -> Dict[str, Optional[float]]:
         """
         Zwraca słownik z różnymi typami stop loss dla pozycji
         
         Args:
             position: Obiekt pozycji
-            sl_staly: Wartość stałego SL w punktach (jeśli None, nie obliczamy)
+            sl_staly_values: Słownik z wartościami SL stałego per instrument (np. {"DAX": 10, "NASDAQ": 15})
         
         Returns:
             Słownik z kluczami: 'sl_recznie', 'sl_baza', 'sl_staly'
@@ -162,13 +164,27 @@ class PositionAnalyzer:
             'sl_staly': None
         }
         
-        # Oblicz SL stały jeśli podano wartość
-        if sl_staly is not None:
-            # 1 punkt = 1.0 (nie dzielimy przez 10000!)
-            if position.is_buy:
-                result['sl_staly'] = position.open_price - sl_staly
-            else:  # sell
-                result['sl_staly'] = position.open_price + sl_staly
+        # Oblicz SL stały na podstawie mapowania instrumentów
+        if sl_staly_values:
+            from config.instrument_tickets_config import get_instrument_tickets_config
+            
+            # Znajdź główny instrument dla pozycji
+            tickets_config = get_instrument_tickets_config()
+            main_instrument = tickets_config.get_main_instrument_for_ticket(position.symbol)
+            
+            if main_instrument and main_instrument in sl_staly_values:
+                sl_value = sl_staly_values[main_instrument]
+                
+                if sl_value is not None and sl_value > 0:
+                    # 1 punkt = 1.0 (nie dzielimy przez 10000!)
+                    if position.is_buy:
+                        result['sl_staly'] = position.open_price - sl_value
+                    else:  # sell
+                        result['sl_staly'] = position.open_price + sl_value
+                        
+                print(f"PositionAnalyzer: Symbol {position.symbol} -> Instrument {main_instrument} -> SL {sl_value} -> Final SL {result['sl_staly']}")
+            else:
+                print(f"PositionAnalyzer: Symbol {position.symbol} -> Nie znaleziono mapowania lub brak wartości SL")
         
         return result
     
