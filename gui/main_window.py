@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from gui.data_viewer import DataViewer
 from gui.tp_calculator import TPCalculatorWindow
-from config.database_config import DB_PATH
+from database.connection import get_current_database_info
 
 
 class MainWindow:
@@ -60,7 +60,7 @@ class MainWindow:
         self.notebook.add(self.data_viewer_frame, text="Przeglądarka transakcji")
         
         # Inicjalizacja przeglądarki danych
-        self.data_viewer = DataViewer(self.data_viewer_frame, DB_PATH)
+        self.data_viewer = DataViewer(self.data_viewer_frame)
         
         # Można dodać więcej zakładek tutaj w przyszłości
         # self.analytics_frame = ttk.Frame(self.notebook)
@@ -74,10 +74,11 @@ class MainWindow:
             # Test połączenia
             db.execute_query("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1")
             
-            # Dodaj status bar
+            # Dodaj status bar z informacją o aktualnej bazie
+            db_info = get_current_database_info()
             self.status_bar = ttk.Label(
                 self.root, 
-                text=f"Połączono z bazą danych: {DB_PATH}",
+                text=db_info,
                 relief=tk.SUNKEN,
                 anchor=tk.W
             )

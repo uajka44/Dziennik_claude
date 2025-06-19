@@ -4,6 +4,8 @@ Konfiguracja bazy danych
 
 # Ścieżka do głównej bazy danych
 DB_PATH = r"C:\Users\anasy\AppData\Roaming\MetaQuotes\Terminal\7B8FFB3E490B2B8923BCC10180ACB2DC\MQL5\Files\multi_candles.db"
+DB_PATH2 = r"C:\Users\Apollo\AppData\Roaming\MetaQuotes\Terminal\49CDDEAA95A409ED22BD2287BB67CB9C\MQL5\Files\multi_candles.db"
+
 
 # Nazwy tabel
 POSITIONS_TABLE = "positions"
