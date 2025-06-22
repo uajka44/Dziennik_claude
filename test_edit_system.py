@@ -43,10 +43,8 @@ def test_edit_manager():
     # Test zerowania
     manager1._save_current_ticket(0)
     
-    with open(file_path, 'r') as f:
-        content = f.read().strip()
-    
-    assert content == "0", f"Oczekiwano 0, otrzymano {content}"
+    saved_ticket_zero = comm.get_current_edit_ticket()
+    assert saved_ticket_zero == 0, f"Oczekiwano 0, otrzymano {saved_ticket_zero}"
     print("✅ Zerowanie ticket działa poprawnie")
     
     # Test statusu
@@ -58,11 +56,8 @@ def test_edit_manager():
     test_tickets = [123456, 123457, 123458]
     for ticket in test_tickets:
         manager1._save_current_ticket(ticket)
-        
-        with open(file_path, 'r') as f:
-            content = f.read().strip()
-        
-        assert content == str(ticket), f"Oczekiwano {ticket}, otrzymano {content}"
+        saved_ticket = comm.get_current_edit_ticket()
+        assert saved_ticket == ticket, f"Oczekiwano {ticket}, otrzymano {saved_ticket}"
     
     print(f"✅ Test wielu ticketów przeszedł pomyślnie")
     
@@ -77,6 +72,20 @@ def test_edit_manager():
     assert "height" in test_config, "Brak konfiguracji height"
     print("✅ WindowConfigManager działa poprawnie")
     
+    # Test communication managera
+    print("✅ Testuję CommunicationManager...")
+    from database.communication import get_communication_manager
+    
+    comm = get_communication_manager()
+    comm.set_current_edit_ticket(789)
+    read_ticket = comm.get_current_edit_ticket()
+    
+    assert read_ticket == 789, f"Błąd komunikacji: oczekiwano 789, otrzymano {read_ticket}"
+    print("✅ CommunicationManager działa poprawnie")
+    
+    # Wyczyść po teście
+    comm.clear_edit_session()
+    
     print("✅ System nawigacji gotowy do testów GUI")
     
     print("\n🎉 Wszystkie testy przeszły pomyślnie!")
@@ -84,10 +93,10 @@ def test_edit_manager():
     print("   - Większe okno edycji (700x900)")
     print("   - Przyciski Next/Prev z nawigacją")
     print("   - Automatyczny zapis przed otwarciem nowej pozycji")
-    print("   - Komunikacja z MQL5")
     print("   - 🆕 Zapamiętywanie pozycji okien")
     print("   - 🆕 Plik konfiguracyjny window_config.json")
     print("   - 🆕 Opcje reset w menu Ustawienia")
+    print("   - 🆕 Komunikacja z MQL5 przez bazę danych (tabela communication)")
     return True
 
 

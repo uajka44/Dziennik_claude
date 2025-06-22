@@ -1,8 +1,7 @@
 """
 Manager okien edycji - zapewnia że tylko jedno okno edycji jest otwarte w danym czasie
-oraz komunikuje z MQL5 o aktualnie edytowanej pozycji
+oraz komunikuje z MQL5 o aktualnie edytowanej pozycji przez bazę danych
 """
-import os
 import threading
 
 
@@ -26,7 +25,12 @@ class EditWindowManager:
             
         self._current_window = None
         self._current_ticket = None
-        self._communication_file = r"E:\Trading\current_edit_ticket.txt"
+        
+        # Import communication managera
+        from database.communication import get_communication_manager
+        self.communication = get_communication_manager()
+        
+        print(f"[EditManager] Komunikacja przez bazę danych multi_candles.db")
         self._initialized = True
         
         # Inicjalizacja - oznacz że nic nie edytujemy
@@ -107,22 +111,17 @@ class EditWindowManager:
     
     def _save_current_ticket(self, ticket):
         """
-        Zapisuje aktualny ticket do pliku komunikacyjnego z MQL5
+        Zapisuje aktualny ticket do bazy danych
         
         Args:
             ticket: Numer ticket (0 oznacza brak edycji)
         """
         try:
-            # Upewnij się że katalog istnieje
-            os.makedirs(os.path.dirname(self._communication_file), exist_ok=True)
-            
-            with open(self._communication_file, 'w', encoding='utf-8') as f:
-                f.write(str(ticket))
-                
-            print(f"[EditManager] Zapisano ticket do komunikacji: {ticket}")
+            self.communication.set_current_edit_ticket(ticket)
+            print(f"[EditManager] Zapisano ticket do bazy: {ticket}")
             
         except Exception as e:
-            print(f"[EditManager] Błąd zapisu pliku komunikacyjnego: {e}")
+            print(f"[EditManager] Błąd zapisu do bazy: {e}")
     
     def get_current_ticket(self):
         """Zwraca aktualnie edytowany ticket (lub None)"""
@@ -133,5 +132,5 @@ class EditWindowManager:
         return self._current_window is not None
     
     def get_communication_file_path(self):
-        """Zwraca ścieżkę do pliku komunikacyjnego"""
-        return self._communication_file
+        """Zwraca informacje o komunikacji"""
+        return f"Komunikacja przez bazę danych: multi_candles.db -> tabela communication"
