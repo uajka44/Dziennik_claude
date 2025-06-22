@@ -1,0 +1,16 @@
+{
+  "edit_dialog": {
+    "width": 700,
+    "height": 900,
+    "x": 1624,
+    "y": 162,
+    "remember_position": true
+  },
+  "main_window": {
+    "width": 1600,
+    "height": 900,
+    "x": null,
+    "y": null,
+    "remember_position": true
+  }
+}

@@ -14,7 +14,16 @@ class MainWindow:
     def __init__(self, root):
         self.root = root
         self.root.title("Dziennik Transakcji - AI 3.0")
-        self.root.geometry("1600x900")
+        
+        # Manager konfiguracji okien
+        from gui.window_config import WindowConfigManager
+        self.window_config = WindowConfigManager()
+        
+        # Zastosuj konfigurację głównego okna
+        self.window_config.apply_window_config(self.root, "main_window")
+        
+        # Zapisz konfigurację przy zamykaniu
+        self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
         
         # Tworzenie menu
         self._create_menu()
@@ -124,7 +133,51 @@ class MainWindow:
     
     def _open_settings(self):
         """Otwiera okno ustawień"""
-        messagebox.showinfo("Informacja", "Ustawienia będą dostępne w przyszłej wersji")
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("Ustawienia")
+        settings_window.geometry("400x300")
+        settings_window.transient(self.root)
+        settings_window.grab_set()
+        
+        # Sekcja konfiguracji okien
+        window_frame = ttk.LabelFrame(settings_window, text="Konfiguracja okien")
+        window_frame.pack(fill="x", padx=10, pady=10)
+        
+        ttk.Label(window_frame, 
+                 text="Resetuj pozycje i rozmiary okien:").pack(pady=5)
+        
+        button_frame = ttk.Frame(window_frame)
+        button_frame.pack(pady=5)
+        
+        ttk.Button(button_frame, 
+                  text="Reset okna edycji", 
+                  command=lambda: self._reset_window_config("edit_dialog")).pack(side="left", padx=5)
+        
+        ttk.Button(button_frame, 
+                  text="Reset głównego okna", 
+                  command=lambda: self._reset_window_config("main_window")).pack(side="left", padx=5)
+        
+        ttk.Button(button_frame, 
+                  text="Reset wszystkich", 
+                  command=lambda: self._reset_window_config(None)).pack(side="left", padx=5)
+        
+        # Przycisk zamknij
+        ttk.Button(settings_window, 
+                  text="Zamknij", 
+                  command=settings_window.destroy).pack(pady=20)
+    
+    def _reset_window_config(self, window_name):
+        """Resetuje konfigurację okien"""
+        try:
+            self.window_config.reset_window_config(window_name)
+            
+            if window_name:
+                messagebox.showinfo("Sukces", f"Zresetowano konfigurację okna: {window_name}")
+            else:
+                messagebox.showinfo("Sukces", "Zresetowano konfigurację wszystkich okien")
+                
+        except Exception as e:
+            messagebox.showerror("Błąd", f"Nie można zresetować konfiguracji: {e}")
     
     def _show_about(self):
         """Pokazuje informacje o programie"""
@@ -144,3 +197,16 @@ Wersja: 3.0
 Data: 2025"""
         
         messagebox.showinfo("O programie", about_text)
+    
+    def _on_closing(self):
+        """Obsługuje zamknięcie aplikacji"""
+        try:
+            # Zapisz konfigurację głównego okna
+            self.window_config.save_window_config(self.root, "main_window")
+            print("[MainWindow] Zapisano konfigurację okna")
+        except Exception as e:
+            print(f"[MainWindow] Błąd zapisu konfiguracji: {e}")
+        
+        # Zamknij aplikację
+        self.root.quit()
+        self.root.destroy()

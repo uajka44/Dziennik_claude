@@ -22,6 +22,13 @@ NOWE FUNKCJONALNOŚCI (CZERWIEC 2025):
     - Okno "Tickety instrumentów" w menu Narzędzia
     - Mapowanie różnych nazw (us100, nq100, nasdaq) na główne instrumenty (NASDAQ)
     - Domyślne instrumenty: DAX, NASDAQ, DJ, GOLD, BTC
+✅ ** NAJNOWSZE (22.06.2025) ** System edycji z nawigacją:
+    - Tylko jedno okno edycji w danym czasie
+    - Przyciski Next/Prev do nawigacji między pozycjami
+    - Automatyczny zapis przed otwarciem nowej pozycji
+    - Zapamiętywanie pozycji i rozmiarów okien
+    - Komunikacja z MQL5 przez plik E:\Trading\current_edit_ticket.txt
+    - Menu ustawień z opcjami reset pozycji okien
 
 KOMPONENTY TECHNICZNE:
 ----------------------
@@ -44,7 +51,8 @@ E:\Trading\dziennik\python\Dziennik_claude\
 │   ├── database_config.py      # Konfiguracja połączeń do bazy (DB_PATH, AVAILABLE_INSTRUMENTS)
 │   ├── field_definitions.py    # Definicje pól formularza
 │   ├── sl_config.py           # ** NOWY ** Konfiguracja SL stałego per instrument
-│   └── instrument_tickets_config.py # ** NOWY ** Mapowanie ticketów instrumentów
+│   ├── instrument_tickets_config.py # ** NOWY ** Mapowanie ticketów instrumentów
+│   └── window_config.json     # ** NOWY ** Plik konfiguracyjny pozycji i rozmiarów okien
 ├── database/
 │   ├── __init__.py
 │   ├── connection.py           # Zarządzanie połączeniami SQLite
@@ -52,9 +60,12 @@ E:\Trading\dziennik\python\Dziennik_claude\
 │   └── queries.py             # Zapytania SQL (PositionQueries, CandleQueries, TPCalculationQueries)
 ├── gui/
 │   ├── __init__.py
-│   ├── main_window.py         # ** ZAKTUALIZOWANY ** Główne okno aplikacji z menu Tickety instrumentów
-│   ├── data_viewer.py         # ** ZAKTUALIZOWANY ** Przeglądarka transakcji z winrate
-│   ├── edit_dialog.py         # Okno edycji transakcji
+│   ├── main_window.py         # ** ZAKTUALIZOWANY ** Główne okno aplikacji z menu i zapisywaniem pozycji
+│   ├── data_viewer.py         # ** ZAKTUALIZOWANY ** Przeglądarka transakcji z winrate i nowym systemem edycji
+│   ├── edit_dialog.py         # ** NOWY ** Okno edycji transakcji (zastąpił kod w data_viewer.py)
+│   ├── edit_manager.py        # ** NOWY ** Singleton manager okien edycji
+│   ├── navigation_handler.py  # ** NOWY ** Handler nawigacji Next/Prev między pozycjami
+│   ├── window_config.py       # ** NOWY ** Manager konfiguracji pozycji i rozmiarów okien
 │   ├── tp_calculator.py       # *** GŁÓWNE OKNO KALKULATORA TP ***
 │   ├── instrument_tickets.py  # ** NOWY ** Okno konfiguracji mapowania ticketów
 │   └── widgets/

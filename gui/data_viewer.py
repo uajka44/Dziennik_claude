@@ -198,6 +198,12 @@ class DataViewer:
         self.parent = parent
         self.position_queries = PositionQueries()
         
+        # Import edit managera i navigation handler
+        from gui.edit_manager import EditWindowManager
+        from gui.navigation_handler import EditNavigationHandler
+        self.edit_manager = EditWindowManager()
+        self.navigation_handler = EditNavigationHandler(self)
+        
         self._create_widgets()
         self._setup_layout()
     
@@ -320,6 +326,21 @@ class DataViewer:
 
         # Obsługa edycji danych
         self.tree.bind("<Double-1>", self.edit_item)
+        
+        # Informacja o statusie edycji
+        self.edit_status_frame = ttk.LabelFrame(self.parent, text="Status edycji")
+        self.edit_status_frame.pack(fill="x", padx=10, pady=5)
+        
+        self.edit_status_label = ttk.Label(
+            self.edit_status_frame, 
+            text="🔴 Brak aktywnej edycji", 
+            foreground="red"
+        )
+        self.edit_status_label.pack(padx=10, pady=5)
+        
+        # Sprawdzaj status co 1 sekundę
+        self._update_edit_status()
+        self.parent.after(1000, self._update_edit_status_loop)
     
     def _setup_layout(self):
         """Konfiguruje układ"""
@@ -637,7 +658,7 @@ class DataViewer:
             messagebox.showerror("Błąd bazy danych", f"Wystąpił błąd podczas ładowania danych: {e}")
     
     def edit_item(self, event):
-        """Obsługuje edycję elementu po podwójnym kliknięciu"""
+        """Obsługuje edycję elementu po podwójnym kliknięciu - używa EditWindowManager"""
         selected_items = self.tree.selection()
         if not selected_items:
             return
@@ -648,146 +669,58 @@ class DataViewer:
         if not values:
             return
 
-        # Tworzenie okna dialogowego do edycji
-        edit_dialog = tk.Toplevel(self.parent)
-        edit_dialog.title("Edytuj dane")
-        edit_dialog.geometry("500x800")
+        # Pobierz ticket z wartości
+        try:
+            ticket = values[COLUMNS.index("ticket")]
+            print(f"[DataViewer] Próba otwarcia edycji dla ticket: {ticket}")
+        except (ValueError, IndexError) as e:
+            print(f"[DataViewer] Błąd pobierania ticket: {e}")
+            messagebox.showerror("Błąd", "Nie można pobrać numeru ticket")
+            return
 
-        # Ramka do edycji
-        edit_frame = ttk.Frame(edit_dialog, padding=10)
-        edit_frame.pack(fill="both", expand=True)
+        # Callback do aktualizacji widoku po zapisaniu
+        def on_save_callback(updated_values):
+            """Aktualizuje widok tabeli po zapisaniu zmian"""
+            self.tree.item(selected_item, values=tuple(updated_values))
+            print(f"[DataViewer] Zaktualizowano widok dla ticket: {ticket}")
 
-        # Wartości do przechowywania wyników edycji
-        entry_widgets = {}
-        checkbox_vars = {}
-
-        # Wyświetlenie daty (nie edytowalna)
-        ttk.Label(edit_frame, text="Data i czas:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        ttk.Label(edit_frame, text=values[0]).grid(row=0, column=1, padx=5, pady=5, sticky="w")
-
-        # Tworzenie kontrolek do edycji dla pól tekstowych
-        row_index = 1
-        for i, field in enumerate(TEXT_FIELDS):
-            ttk.Label(edit_frame, text=f"{field.display_name}:").grid(
-                row=row_index, column=0, padx=5, pady=5, sticky="w"
-            )
-
-            value = values[i + 1] if i + 1 < len(values) else ""
-
-            if field.field_type == "multiline":
-                entry = tk.Text(edit_frame, width=30, height=5)
-                entry.grid(row=row_index, column=1, padx=5, pady=5, sticky="ew")
-                entry.insert("1.0", value)
-                if not field.editable:
-                    entry.config(state="disabled")
-            elif field.name == "setup":
-                entry = SetupEntry(edit_frame, SETUP_SHORTCUTS, width=30)
-                entry.grid(row=row_index, column=1, padx=5, pady=5, sticky="ew")
-                entry.insert(0, value)
-                if not field.editable:
-                    entry.config(state="readonly")
-            else:
-                entry = ttk.Entry(edit_frame, width=30)
-                entry.grid(row=row_index, column=1, padx=5, pady=5, sticky="ew")
-                entry.insert(0, value)
-                if not field.editable:
-                    entry.config(state="readonly")
-
-            entry_widgets[field.name] = entry
-            row_index += 1
-
-        # Separator
-        ttk.Separator(edit_frame, orient="horizontal").grid(
-            row=row_index, column=0, columnspan=2, sticky="ew", pady=10
+        # Sprawdź czy okno edycji jest już otwarte
+        save_current_first = self.edit_manager.is_editing()
+        
+        if save_current_first:
+            print(f"[DataViewer] Okno edycji już otwarte - zapisuję poprzednie przed otwarciem nowego")
+        
+        # Otwórz okno edycji przez manager
+        self.edit_manager.open_edit_window(
+            parent=self.parent,
+            ticket=ticket,
+            values=values,
+            callback=on_save_callback,
+            navigation_handler=self.navigation_handler,
+            save_current_first=save_current_first
         )
-        row_index += 1
-
-        # Checkboxy
-        checkbox_label_frame = ttk.LabelFrame(edit_frame, text="Opcje")
-        checkbox_label_frame.grid(row=row_index, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
-
-        checkbox_frame = ttk.Frame(checkbox_label_frame)
-        checkbox_frame.pack(fill="both", expand=True, padx=5, pady=5)
-
-        checkboxes_per_row = 3
-        for i, field in enumerate(CHECKBOX_FIELDS):
-            col = i % checkboxes_per_row
-            row = i // checkboxes_per_row
-
-            field_index = len(TEXT_FIELDS) + i + 1
-            checkbox_value = (values[field_index] == "✓") if field_index < len(values) else False
-
-            var = tk.IntVar(value=1 if checkbox_value else 0)
-            checkbox = ttk.Checkbutton(checkbox_frame, text=field.display_name, variable=var)
-            checkbox.grid(row=row, column=col, padx=10, pady=5, sticky="w")
-
-            checkbox_vars[field.name] = var
-
-        # Funkcja zapisująca zmiany
-        def save_changes():
-            try:
-                new_values = {}
-                
-                # Pobieranie wartości z pól tekstowych
-                for field_name, widget in entry_widgets.items():
-                    field = ALL_FIELDS[field_name]
-                    if field.field_type == "multiline":
-                        new_values[field_name] = widget.get("1.0", "end-1c")
-                    else:
-                        new_values[field_name] = widget.get()
-
-                # Pobieranie wartości z checkboxów
-                for field_name, var in checkbox_vars.items():
-                    new_values[field_name] = var.get()
-
-                # Pobierz ticket jako klucz do aktualizacji
-                ticket = values[COLUMNS.index("ticket")]
-
-                # Przygotowanie zapytania SQL
-                updateable_fields = []
-                update_values = []
-
-                for field_name, value in new_values.items():
-                    field = ALL_FIELDS.get(field_name)
-                    if field and field.editable:
-                        updateable_fields.append(f"{field_name} = ?")
-                        update_values.append(value)
-
-                if updateable_fields:
-                    update_query = f"""
-                    UPDATE positions 
-                    SET {", ".join(updateable_fields)}
-                    WHERE ticket = ?
-                    """
-                    update_values.append(ticket)
-
-                    execute_update(update_query, tuple(update_values))
-
-                    # Aktualizacja widoku tabeli
-                    updated_values = list(values)
-                    
-                    for i, field in enumerate(TEXT_FIELDS):
-                        if field.name in new_values:
-                            updated_values[i + 1] = new_values[field.name]
-
-                    for i, field in enumerate(CHECKBOX_FIELDS):
-                        if field.name in new_values:
-                            field_index = len(TEXT_FIELDS) + i + 1
-                            updated_values[field_index] = "✓" if new_values[field.name] == 1 else ""
-
-                    self.tree.item(selected_item, values=tuple(updated_values))
-
-                edit_dialog.destroy()
-
-            except Exception as e:
-                messagebox.showerror("Błąd bazy danych", f"Nie można zaktualizować danych: {e}")
-
-        # Przyciski zapisz/anuluj
-        button_frame = ttk.Frame(edit_dialog)
-        button_frame.pack(pady=10)
-
-        ttk.Button(button_frame, text="Zapisz", command=save_changes).grid(row=0, column=0, padx=5)
-        ttk.Button(button_frame, text="Anuluj", command=edit_dialog.destroy).grid(row=0, column=1, padx=5)
+    
+    def _update_edit_status(self):
+        """Aktualizuje status edycji w interfejsie"""
+        try:
+            if self.edit_manager.is_editing():
+                ticket = self.edit_manager.get_current_ticket()
+                self.edit_status_label.config(
+                    text=f"🟢 Edytowane: ticket {ticket}",
+                    foreground="green"
+                )
+            else:
+                self.edit_status_label.config(
+                    text="🔴 Brak aktywnej edycji",
+                    foreground="red"
+                )
+        except Exception as e:
+            print(f"[DataViewer] Błąd aktualizacji statusu: {e}")
+    
+    def _update_edit_status_loop(self):
+        """Pętla aktualizacji statusu co sekundę"""
+        self._update_edit_status()
+        self.parent.after(1000, self._update_edit_status_loop)
     
     def export_current_data(self):
         """Eksportuje aktualnie wyświetlane dane do CSV"""
