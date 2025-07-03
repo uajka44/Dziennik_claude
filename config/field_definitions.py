@@ -28,6 +28,7 @@ TEXT_FIELDS = [
     FormField("profit_points", "Profit", editable=False),
     FormField("setup", "Setup", editable=True),
     FormField("uwagi", "Uwagi", editable=True, field_type="multiline"),
+    FormField("blad", "Błąd", editable=True, field_type="multiline"),
     FormField("trends", "TrendS", editable=True),
     FormField("trendl", "TrendL", editable=True),
     FormField("interwal", "interwal", editable=True),
@@ -75,6 +76,7 @@ COLUMN_WIDTHS = {
     "profit_points": 90,
     "setup": 100,
     "uwagi": 150,
+    "blad": 150,
     "trends": 80,
     "trendl": 80
 }
