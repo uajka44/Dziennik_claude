@@ -1,9 +1,9 @@
 {
   "edit_dialog": {
-    "width": 650,
+    "width": 700,
     "height": 900,
-    "x": 1120,
-    "y": 296,
+    "x": 1624,
+    "y": 162,
     "remember_position": true
   },
   "main_window": {

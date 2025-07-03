@@ -24,7 +24,6 @@ class Position:
     tp: Optional[float] = None
     setup: Optional[str] = None
     uwagi: Optional[str] = None
-    blad: Optional[str] = None
     trends: Optional[int] = None
     trendl: Optional[int] = None
     interwal: Optional[str] = None
