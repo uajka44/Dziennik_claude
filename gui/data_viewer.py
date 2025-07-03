@@ -16,6 +16,7 @@ from database.queries import PositionQueries
 from gui.widgets.custom_entries import SetupEntry
 from utils.date_utils import date_range_to_unix, format_time_for_display
 from utils.formatting import format_profit_points, format_checkbox_value
+from database.migration.sl_opening_migrator import get_sl_migrator
 
 
 class CheckboxDropdown:
@@ -204,8 +205,14 @@ class DataViewer:
         self.edit_manager = EditWindowManager()
         self.navigation_handler = EditNavigationHandler(self)
         
+        # Inicjalizuj migrator
+        self.sl_migrator = get_sl_migrator()
+        
         self._create_widgets()
         self._setup_layout()
+        
+        # Uruchom migrację przy starcie
+        self._run_initial_migration()
     
     def _create_widgets(self):
         """Tworzy wszystkie widgety"""
@@ -236,6 +243,13 @@ class DataViewer:
             text="Quick diagnostyka (konsola)", 
             command=self._quick_diagnostics
         ).grid(row=1, column=1, padx=5, pady=5)
+        
+        # Przycisk przywracania z backupu
+        ttk.Button(
+            self.filter_frame, 
+            text="Przywróć z backupu", 
+            command=self._restore_from_backup
+        ).grid(row=1, column=2, padx=5, pady=5)
         
         # === SEKCJA WYBORU DAT ===
         self.date_frame = ttk.LabelFrame(self.parent, text="Zakres dat")
@@ -536,8 +550,64 @@ class DataViewer:
         self.start_date_entry.set_date(today)
         self.end_date_entry.set_date(today)
     
+    def _run_initial_migration(self):
+        """Uruchamia migrację SL opening przy starcie aplikacji"""
+        try:
+            print("[DataViewer] Uruchamianie migracji SL opening...")
+            migrated_count = self.sl_migrator.run_migration()
+            
+            # Pokaż status migracji
+            status = self.sl_migrator.get_migration_status()
+            print(f"[DataViewer] Status migracji: {status}")
+            
+            if migrated_count > 0:
+                print(f"[DataViewer] Zmigrowano {migrated_count} rekordów SL opening")
+                
+        except Exception as e:
+            print(f"[DataViewer] Błąd migracji przy starcie: {e}")
+    
+    def _restore_from_backup(self):
+        """Uruchamia przywracanie danych z backupu"""
+        try:
+            # Pokaż okno potwierdzenia
+            result = messagebox.askyesno(
+                "Przywracanie z backupu",
+                "Czy chcesz przywrócić dane SL (opening) z backupu?\n\n"
+                "To nadpisze puste wartości sl_opening w tabeli positions."
+            )
+            
+            if result:
+                print("[DataViewer] Uruchamianie przywracania z backupu...")
+                restored_count = self.sl_migrator.restore_from_backup()
+                
+                if restored_count > 0:
+                    messagebox.showinfo(
+                        "Sukces", 
+                        f"Przywrócono {restored_count} rekordów z backupu!\n\n"
+                        f"Odśwież dane (przycisk Wyszukaj) aby zobaczyć zmiany."
+                    )
+                    # Automatycznie odśwież dane
+                    self.load_data()
+                else:
+                    messagebox.showinfo(
+                        "Informacja", 
+                        "Brak danych do przywracania lub wszystkie już są zaktualizowane."
+                    )
+                    
+        except Exception as e:
+            print(f"[DataViewer] Błąd przywracania z backupu: {e}")
+            messagebox.showerror("Błąd", f"Nie udało się przywrócić z backupu:\n{e}")
+    
     def load_data(self):
         """Ładuje dane z bazy danych dla podanego zakresu dat i wybranych instrumentów"""
+        # Uruchom migrację przed każdym wyszukiwaniem
+        try:
+            migrated_count = self.sl_migrator.run_migration()
+            if migrated_count > 0:
+                print(f"[DataViewer] Zmigrowano dodatkowo {migrated_count} rekordów SL opening")
+        except Exception as e:
+            print(f"[DataViewer] Błąd migracji przy wyszukiwaniu: {e}")
+        
         start_date = self.start_date_entry.get()
         end_date = self.end_date_entry.get()
 

@@ -20,10 +20,12 @@ class Position:
     profit: Optional[float] = None
     profit_points: Optional[float] = None
     sl: Optional[float] = None
+    sl_opening: Optional[float] = None
     sl_recznie: Optional[float] = None
     tp: Optional[float] = None
     setup: Optional[str] = None
     uwagi: Optional[str] = None
+    blad: Optional[str] = None
     trends: Optional[int] = None
     trendl: Optional[int] = None
     interwal: Optional[str] = None
