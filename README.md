@@ -11,6 +11,13 @@ Zrefaktoryzowana i rozszerzona aplikacja do zarządzania dziennikiem transakcji 
 - **Uwzględnienie spread'u**: Realistyczne kalkulacje z uwzględnieniem kosztów
 - **Eksport wyników**: Zapis do CSV i bazy danych
 
+### 🔔 Monitor nowych zleceń (NOWE!)
+- **Automatyczne wykrywanie** nowych pozycji w bazie danych
+- **Powiadomienia dźwiękowe** przy pojawieniu się nowego zlecenia
+- **Konfigurowalne sprawdzanie** - ustaw interwał od 5 do 300 sekund
+- **Interface ustawień** - włącz/wyłącz monitoring przez GUI
+- **Rozszerzalna architektura** - łatwe dodawanie nowych typów powiadomień
+
 ### 🏗️ Nowa architektura modularna
 - **Lepszy podział odpowiedzialności**: Każdy komponent w osobnym pliku
 - **Łatwość rozwoju**: Proste dodawanie nowych funkcji

@@ -17,6 +17,8 @@ from gui.widgets.custom_entries import SetupEntry
 from utils.date_utils import date_range_to_unix, format_time_for_display
 from utils.formatting import format_profit_points, format_checkbox_value
 from database.migration.sl_opening_migrator import get_sl_migrator
+from monitoring.order_monitor import get_order_monitor
+from config.monitor_config import DEFAULT_MONITOR_SETTINGS
 
 
 class CheckboxDropdown:
@@ -208,11 +210,19 @@ class DataViewer:
         # Inicjalizuj migrator
         self.sl_migrator = get_sl_migrator()
         
+        # Inicjalizuj monitor nowych zleceń
+        self.order_monitor = get_order_monitor()
+        self.order_monitor.add_new_order_callback(self._on_new_order_detected)
+        
         self._create_widgets()
         self._setup_layout()
         
         # Uruchom migrację przy starcie
         self._run_initial_migration()
+        
+        # Uruchom monitoring nowych zleceń (jeśli włączone)
+        if DEFAULT_MONITOR_SETTINGS["auto_start"]:
+            self._start_order_monitoring()
     
     def _create_widgets(self):
         """Tworzy wszystkie widgety"""
@@ -231,7 +241,7 @@ class DataViewer:
         # Załaduj symbole i dodaj do dropdown
         self._load_available_symbols()
         
-        # Przyciski diagnostyczne
+        # Przyciski diagnostyczne i narzędzia
         ttk.Button(
             self.filter_frame, 
             text="Diagnostyka symbolów", 
@@ -250,6 +260,13 @@ class DataViewer:
             text="Przywróć z backupu", 
             command=self._restore_from_backup
         ).grid(row=1, column=2, padx=5, pady=5)
+        
+        # Przycisk ustawień monitora
+        ttk.Button(
+            self.filter_frame, 
+            text="Ustawienia monitora", 
+            command=self._show_monitor_settings
+        ).grid(row=1, column=3, padx=5, pady=5)
         
         # === SEKCJA WYBORU DAT ===
         self.date_frame = ttk.LabelFrame(self.parent, text="Zakres dat")
@@ -597,6 +614,99 @@ class DataViewer:
         except Exception as e:
             print(f"[DataViewer] Błąd przywracania z backupu: {e}")
             messagebox.showerror("Błąd", f"Nie udało się przywrócić z backupu:\n{e}")
+    
+    def _start_order_monitoring(self):
+        """Uruchamia monitoring nowych zleceń"""
+        try:
+            self.order_monitor.set_check_interval(DEFAULT_MONITOR_SETTINGS["check_interval"])
+            self.order_monitor.start_monitoring()
+        except Exception as e:
+            print(f"[DataViewer] Błąd uruchamiania monitora: {e}")
+    
+    def _on_new_order_detected(self, order_data: dict):
+        """Callback wywoływany gdy zostanie wykryte nowe zlecenie"""
+        try:
+            ticket = order_data['ticket']
+            symbol = order_data['symbol']
+            
+            # Tu możesz dodać dodatkowe akcje w przyszłości:
+            # - Automatyczne odświeżenie tabeli
+            # - Powiadomienia na ekranie  
+            # - Zapisywanie do logów
+            # - Integracja z zewnętrznymi systemami
+            
+            print(f"[DataViewer] 📨 Wykryto nowe zlecenie: #{ticket} ({symbol})")
+            
+        except Exception as e:
+            print(f"[DataViewer] Błąd obsługi nowego zlecenia: {e}")
+    
+    def _show_monitor_settings(self):
+        """Pokazuje okno ustawień monitora"""
+        try:
+            # Tworzy okno ustawień
+            settings_window = tk.Toplevel(self.parent)
+            settings_window.title("Ustawienia monitora nowych zleceń")
+            settings_window.geometry("400x300")
+            settings_window.transient(self.parent)
+            settings_window.grab_set()
+            
+            # Główny frame
+            main_frame = ttk.Frame(settings_window, padding=20)
+            main_frame.pack(fill="both", expand=True)
+            
+            # Status monitora
+            status = self.order_monitor.get_status()
+            status_text = "🟢 Włączony" if status['is_running'] else "🔴 Wyłączony"
+            
+            ttk.Label(main_frame, text=f"Status: {status_text}", 
+                     font=("Arial", 10, "bold")).pack(pady=10)
+            
+            # Interwał sprawdzania
+            ttk.Label(main_frame, text="Interwał sprawdzania (sekundy):").pack(pady=5)
+            
+            interval_var = tk.IntVar(value=status['check_interval'])
+            interval_spinner = tk.Spinbox(main_frame, from_=5, to=300, 
+                                        textvariable=interval_var, width=10)
+            interval_spinner.pack(pady=5)
+            
+            # Przyciski kontrolne
+            button_frame = ttk.Frame(main_frame)
+            button_frame.pack(pady=20)
+            
+            def start_monitor():
+                self.order_monitor.set_check_interval(interval_var.get())
+                self.order_monitor.start_monitoring()
+                settings_window.destroy()
+            
+            def stop_monitor():
+                self.order_monitor.stop_monitoring()
+                settings_window.destroy()
+            
+            if status['is_running']:
+                ttk.Button(button_frame, text="Zatrzymaj", 
+                          command=stop_monitor).pack(side="left", padx=5)
+            else:
+                ttk.Button(button_frame, text="Uruchom", 
+                          command=start_monitor).pack(side="left", padx=5)
+            
+            ttk.Button(button_frame, text="Zastosuj interwał", 
+                      command=lambda: self.order_monitor.set_check_interval(interval_var.get())).pack(side="left", padx=5)
+            
+            ttk.Button(button_frame, text="Zamknij", 
+                      command=settings_window.destroy).pack(side="left", padx=5)
+            
+            # Informacje
+            info_frame = ttk.LabelFrame(main_frame, text="Informacje")
+            info_frame.pack(fill="x", pady=10)
+            
+            ttk.Label(info_frame, 
+                     text=f"Znanych ticketów: {status['known_tickets_count']}").pack(padx=10, pady=2)
+            ttk.Label(info_frame, 
+                     text=f"Aktywnych callbacków: {status['callbacks_count']}").pack(padx=10, pady=2)
+            
+        except Exception as e:
+            print(f"[DataViewer] Błąd ustawień monitora: {e}")
+            messagebox.showerror("Błąd", f"Nie można otworzyć ustawień:\n{e}")
     
     def load_data(self):
         """Ładuje dane z bazy danych dla podanego zakresu dat i wybranych instrumentów"""

@@ -185,6 +185,21 @@ class EditDialog:
                  text=f"🔗 MQL5 wie że edytujesz ticket: {self.ticket}",
                  foreground="green").pack(padx=10, pady=5)
     
+    def _play_success_sound(self):
+        """Odgrywa dźwięk sukcesu po zapisaniu"""
+        try:
+            import winsound
+            # Odegraj systemowy dźwięk sukcesu
+            winsound.MessageBeep(winsound.MB_OK)
+        except ImportError:
+            # Fallback dla systemów nie-Windows
+            try:
+                import os
+                # Dla Linux/Mac
+                os.system('printf "\a"')  # Terminal bell
+            except:
+                print("[EditDialog] 🔔 Zapisano (brak obsługi dźwięku)")
+    
     def _save_changes(self):
         """Zapisuje zmiany do bazy danych"""
         try:
@@ -240,7 +255,9 @@ class EditDialog:
                     
                     self.on_save_callback(updated_values)
 
-                messagebox.showinfo("Sukces", "Zmiany zostały zapisane!")
+                # Odegraj dźwięk sukcesu zamiast okienka
+                self._play_success_sound()
+                print(f"[EditDialog] ✅ Zapisano zmiany dla ticket: {self.ticket}")
                 self._close_dialog()
 
         except Exception as e:
