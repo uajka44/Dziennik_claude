@@ -19,12 +19,13 @@ from utils.formatting import format_profit_points, format_checkbox_value
 from database.migration.sl_opening_migrator import get_sl_migrator
 from monitoring.order_monitor import get_order_monitor
 from config.monitor_config import DEFAULT_MONITOR_SETTINGS
+from config.setup_config import get_setup_config
 
 
 class CheckboxDropdown:
     """Rozwijana lista z checkboxami"""
     
-    def __init__(self, parent, callback=None):
+    def __init__(self, parent, callback=None, default_text="Symbole"):
         self.parent = parent
         self.callback = callback
         self.is_open = False
@@ -38,7 +39,7 @@ class CheckboxDropdown:
         self.button_frame = ttk.Frame(self.main_frame)
         self.button_frame.pack(fill="x")
         
-        self.display_var = tk.StringVar(value="Symbole")
+        self.display_var = tk.StringVar(value=default_text)
         self.dropdown_button = ttk.Button(
             self.button_frame,
             textvariable=self.display_var,
@@ -241,25 +242,27 @@ class DataViewer:
         # Załaduj symbole i dodaj do dropdown
         self._load_available_symbols()
         
-        # Przyciski diagnostyczne i narzędzia
-        ttk.Button(
-            self.filter_frame, 
-            text="Diagnostyka symbolów", 
-            command=self._show_symbol_diagnostics
-        ).grid(row=1, column=0, padx=5, pady=5)
+        # Filtr Setup - rozwijana lista z checkboxami
+        ttk.Label(self.filter_frame, text="Setup:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
         
-        ttk.Button(
-            self.filter_frame, 
-            text="Quick diagnostyka (konsola)", 
-            command=self._quick_diagnostics
-        ).grid(row=1, column=1, padx=5, pady=5)
+        # Checkbox do włączania/wyłączania filtra Setup
+        self.setup_filter_active_var = tk.BooleanVar(value=False)  # Domyślnie nieaktywny
+        self.setup_filter_checkbox = ttk.Checkbutton(
+            self.filter_frame,
+            text="Aktywny",
+            variable=self.setup_filter_active_var,
+            command=self.load_data
+        )
+        self.setup_filter_checkbox.grid(row=1, column=1, padx=5, pady=5, sticky="w")
         
-        # Przycisk przywracania z backupu
-        ttk.Button(
-            self.filter_frame, 
-            text="Przywróć z backupu", 
-            command=self._restore_from_backup
-        ).grid(row=1, column=2, padx=5, pady=5)
+        # Custom rozwijana lista z checkboxami dla setupów
+        self.setup_dropdown = CheckboxDropdown(self.filter_frame, callback=self._on_setup_filter_change, default_text="Setupy")
+        self.setup_dropdown.grid(row=1, column=2, padx=5, pady=5, sticky="w")
+        
+        # Załaduj setupy i dodaj do dropdown
+        self._load_available_setups()
+        
+        # Przyciski diagnostyczne i narzędzia zostały przeniesione do menu Narzędzia -> Ustawienia
         
         # === SEKCJA WYBORU DAT ===
         self.date_frame = ttk.LabelFrame(self.parent, text="Zakres dat")
@@ -406,6 +409,35 @@ class DataViewer:
         except Exception as e:
             print(f"Błąd podczas ładowania symbolów: {e}")
             messagebox.showerror("Błąd", f"Nie można załadować symbolów z bazy: {e}")
+    
+    def _load_available_setups(self):
+        """Pobiera dostępne setupy z konfiguracji i dodaje do dropdown"""
+        try:
+            # Pobierz setupy z nowego systemu konfiguracji
+            setup_config = get_setup_config()
+            setup_names = setup_config.get_setup_names()
+            
+            print(f"Znalezione setupy: {setup_names}")
+            
+            # Dodaj setupy do dropdown
+            for setup_name in sorted(setup_names):
+                self.setup_dropdown.add_item(
+                    setup_name, 
+                    setup_name,  # Wyświetla nazwę setupu (rgr, momo, etc.)
+                    checked=True  # Domyślnie wszystkie zaznaczone
+                )
+                    
+            print(f"Załadowano {len(setup_names)} setupów do dropdown: {setup_names}")
+            
+        except Exception as e:
+            print(f"Błąd podczas ładowania setupów: {e}")
+            messagebox.showerror("Błąd", f"Nie można załadować setupów: {e}")
+    
+    def _on_setup_filter_change(self):
+        """Obsługuje zmianę w filtrze Setup"""
+        # Zawsze przeładuj dane gdy zmieni się filtr Setup
+        # (load_data sprawdzi czy filtr jest aktywny)
+        self.load_data()
     
 
     def _show_symbol_diagnostics(self):
@@ -676,11 +708,14 @@ class DataViewer:
             # Dynamiczne generowanie zapytania SQL
             columns_str = ", ".join(COLUMNS)
             
-            if all_selected:
-                # Wszystkie instrumenty
-                query = self.position_queries.get_positions_by_date_range(columns_str)
-                rows = execute_query(query, (start_unix, end_unix))
-            else:
+            # Podstawowe parametry
+            base_params = [start_unix, end_unix]
+            
+            # Buduj warunki WHERE
+            where_conditions = ["open_time BETWEEN ? AND ?"]
+            
+            # Warunek dla instrumentów
+            if not all_selected:
                 # Wybrane instrumenty - uwzględnij oba formaty (z i bez \x00)
                 expanded_symbols = []
                 for clean_symbol in selected_symbols:
@@ -688,14 +723,39 @@ class DataViewer:
                     expanded_symbols.append(clean_symbol + '\x00')  # Format z null character
                 
                 placeholders = ", ".join(["?" for _ in expanded_symbols])
-                query = f"""
-                SELECT {columns_str}
-                FROM positions 
-                WHERE open_time BETWEEN ? AND ? AND symbol IN ({placeholders})
-                ORDER BY open_time
-                """
-                params = [start_unix, end_unix] + expanded_symbols
-                rows = execute_query(query, params)
+                where_conditions.append(f"symbol IN ({placeholders})")
+                base_params.extend(expanded_symbols)
+            
+            # Warunek dla Setup (jeśli filtr jest aktywny)
+            setup_filter_active = self.setup_filter_active_var.get()
+            if setup_filter_active:
+                selected_setups = self.setup_dropdown.get_selected()
+                if selected_setups:
+                    # Dodaj warunek dla setupów
+                    setup_placeholders = ", ".join(["?" for _ in selected_setups])
+                    where_conditions.append(f"setup IN ({setup_placeholders})")
+                    base_params.extend(selected_setups)
+                    print(f"Filtr Setup aktywny - wybrane setupy: {selected_setups}")
+                else:
+                    print("Filtr Setup aktywny ale brak wybranych setupów - zwracam puste wyniki")
+                    # Jeśli filtr aktywny ale nic nie wybrano, zwróć puste wyniki
+                    self.total_profit_label.config(text="0.00")
+                    self.transactions_count_label.config(text="0")
+                    self.winning_trades_label.config(text="0")
+                    self.losing_trades_label.config(text="0")
+                    self.winrate_label.config(text="0.00%")
+                    return
+            
+            # Złóż zapytanie
+            where_clause = " AND ".join(where_conditions)
+            query = f"""
+            SELECT {columns_str}
+            FROM positions 
+            WHERE {where_clause}
+            ORDER BY open_time
+            """
+            
+            rows = execute_query(query, base_params)
             
             print(f"Pobrano {len(rows)} transakcji dla wybranych filtrów")
             print(f"Wybrane symbole: {selected_symbols if not all_selected else 'wszystkie'}")

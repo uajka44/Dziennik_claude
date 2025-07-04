@@ -1,0 +1,50 @@
+{
+  "r": {
+    "name": "rgr",
+    "description": "RGR setup"
+  },
+  "ra": {
+    "name": "ramieszczytowe",
+    "description": "Ramię szczytowe"
+  },
+  "m": {
+    "name": "momoschodek",
+    "description": "Momo schodek"
+  },
+  "mm": {
+    "name": "momo",
+    "description": "Momentum"
+  },
+  "pp": {
+    "name": "przebitypoziom",
+    "description": "Przebity poziom"
+  },
+  "p": {
+    "name": "poziom",
+    "description": "Poziom"
+  },
+  "s": {
+    "name": "schodek",
+    "description": "Schodek"
+  },
+  "rr": {
+    "name": "srgr",
+    "description": "Super RGR"
+  },
+  "re": {
+    "name": "retestkonsoli",
+    "description": "Retest konsoli"
+  },
+  "n": {
+    "name": "niewazne",
+    "description": "Nieważne"
+  },
+  "o": {
+    "name": "odjebalem",
+    "description": "Odjebałem"
+  },
+  "ss": {
+    "name": "sschodek",
+    "description": "Super schodek"
+  }
+}

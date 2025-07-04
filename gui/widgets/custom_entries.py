@@ -3,14 +3,21 @@ Niestandardowe pola wprowadzania danych
 """
 import tkinter as tk
 from tkinter import ttk
+from config.setup_config import get_setup_config
 
 
 class SetupEntry(ttk.Entry):
     """Entry z obsługą skrótów dla pola Setup"""
     
-    def __init__(self, parent, shortcuts, **kwargs):
+    def __init__(self, parent, shortcuts=None, **kwargs):
         super().__init__(parent, **kwargs)
-        self.shortcuts = shortcuts
+        # Ustaw shortcuts - jeśli nie podano, użyj z konfiguracji
+        if shortcuts is None:
+            setup_config = get_setup_config()
+            self.shortcuts = setup_config.get_shortcut_mapping()
+        else:
+            self.shortcuts = shortcuts
+            
         self.bind("<Tab>", self._on_tab)
         self.bind("<FocusOut>", self._on_focus_out)
 
@@ -21,6 +28,11 @@ class SetupEntry(ttk.Entry):
             expanded_value = self.shortcuts[current_value]
             self.delete(0, tk.END)
             self.insert(0, expanded_value)
+    
+    def refresh_shortcuts(self):
+        """Odświeża skróty z konfiguracji"""
+        setup_config = get_setup_config()
+        self.shortcuts = setup_config.get_shortcut_mapping()
 
     def _on_tab(self, event):
         """Obsługa zdarzenia Tab"""

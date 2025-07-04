@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from config.field_definitions import (
-    TEXT_FIELDS, CHECKBOX_FIELDS, ALL_FIELDS, COLUMNS, SETUP_SHORTCUTS
+    TEXT_FIELDS, CHECKBOX_FIELDS, ALL_FIELDS, COLUMNS
 )
 from database.connection import execute_update
 from gui.widgets.custom_entries import SetupEntry
@@ -107,7 +107,7 @@ class EditDialog:
                 if not field.editable:
                     entry.config(state="disabled")
             elif field.name == "setup":
-                entry = SetupEntry(edit_frame, SETUP_SHORTCUTS, width=35)  # Szersze pola
+                entry = SetupEntry(edit_frame, width=35)  # Szersze pola - używa nowego systemu
                 entry.grid(row=row_index, column=1, padx=5, pady=5, sticky="ew")
                 entry.insert(0, value)
                 if not field.editable:

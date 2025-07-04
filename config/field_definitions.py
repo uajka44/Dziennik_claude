@@ -97,18 +97,9 @@ COLUMN_ALIGNMENTS = {
 for field in CHECKBOX_FIELDS:
     COLUMN_ALIGNMENTS[field.name] = "center"
 
-# Definicja skrótów dla pola Setup
+# Definicja skrótów dla pola Setup - przeniesione do config/setup_config.py
+# Używaj get_setup_config().get_shortcut_mapping() zamiast tego słownika
 SETUP_SHORTCUTS = {
-    "r": "rgr",
-    "ra": "ramieszczytowe",
-    "m": "momoschodek",
-    "mm": "momo",
-    "pp": "przebitypoziom",
-    "p": "poziom",
-    "s": "schodek",
-    "rr": "srgr",
-    "re": "retestkonsoli",
-    "n": "niewazne",
-    "o": "odjebalem",
-    "ss": "sschodek"
+    # Te skróty zostały przeniesione do setup_config.py
+    # Zostają tutaj dla kompatybilności wstecznej, ale używaj nowego systemu
 }
