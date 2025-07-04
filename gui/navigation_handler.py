@@ -38,18 +38,14 @@ class EditNavigationHandler:
             all_symbols_count = len(self.data_viewer.instruments_dropdown.items)
             all_selected = len(selected_symbols) == all_symbols_count
             
-            columns_str = ", ".join(COLUMNS)
+            # Podstawowe parametry
+            base_params = [start_unix, end_unix]
             
-            if all_selected:
-                # Wszystkie instrumenty
-                query = f"""
-                SELECT {columns_str}
-                FROM positions 
-                WHERE open_time BETWEEN ? AND ?
-                ORDER BY open_time
-                """
-                rows = execute_query(query, (start_unix, end_unix))
-            else:
+            # Buduj warunki WHERE (identycznie jak w load_data)
+            where_conditions = ["open_time BETWEEN ? AND ?"]
+            
+            # Warunek dla instrumentów
+            if not all_selected:
                 # Wybrane instrumenty - uwzględnij oba formaty (z i bez \x00)
                 expanded_symbols = []
                 for clean_symbol in selected_symbols:
@@ -57,14 +53,35 @@ class EditNavigationHandler:
                     expanded_symbols.append(clean_symbol + '\x00')
                 
                 placeholders = ", ".join(["?" for _ in expanded_symbols])
-                query = f"""
-                SELECT {columns_str}
-                FROM positions 
-                WHERE open_time BETWEEN ? AND ? AND symbol IN ({placeholders})
-                ORDER BY open_time
-                """
-                params = [start_unix, end_unix] + expanded_symbols
-                rows = execute_query(query, params)
+                where_conditions.append(f"symbol IN ({placeholders})")
+                base_params.extend(expanded_symbols)
+            
+            # Warunek dla Setup (jeśli filtr jest aktywny) - NOWE!
+            setup_filter_active = self.data_viewer.setup_filter_active_var.get()
+            if setup_filter_active:
+                selected_setups = self.data_viewer.setup_dropdown.get_selected()
+                if selected_setups:
+                    # Dodaj warunek dla setupów
+                    setup_placeholders = ", ".join(["?" for _ in selected_setups])
+                    where_conditions.append(f"setup IN ({setup_placeholders})")
+                    base_params.extend(selected_setups)
+                    print(f"[NavigationHandler] Filtr Setup aktywny - wybrane setupy: {selected_setups}")
+                else:
+                    print(f"[NavigationHandler] Filtr Setup aktywny ale brak wybranych setupów - pusta lista")
+                    self._current_positions = []
+                    return
+            
+            # Złóż zapytanie
+            columns_str = ", ".join(COLUMNS)
+            where_clause = " AND ".join(where_conditions)
+            query = f"""
+            SELECT {columns_str}
+            FROM positions 
+            WHERE {where_clause}
+            ORDER BY open_time
+            """
+            
+            rows = execute_query(query, base_params)
             
             # Konwertuj na listę z ticket jako kluczem
             self._current_positions = []
@@ -161,6 +178,9 @@ class EditNavigationHandler:
         next_position = self._current_positions[next_index]
         print(f"[NavigationHandler] Przechodzenie do następnej pozycji: {next_position['ticket']}")
         
+        # Podświetl nową pozycję przed otwarciem - NOWE!
+        self.data_viewer.highlight_ticket(next_position['ticket'])
+        
         # Otwórz następną pozycję
         self._open_position(next_position)
     
@@ -181,12 +201,18 @@ class EditNavigationHandler:
         prev_position = self._current_positions[prev_index]
         print(f"[NavigationHandler] Przechodzenie do poprzedniej pozycji: {prev_position['ticket']}")
         
+        # Podświetl nową pozycję przed otwarciem - NOWE!
+        self.data_viewer.highlight_ticket(prev_position['ticket'])
+        
         # Otwórz poprzednią pozycję
         self._open_position(prev_position)
     
     def _open_position(self, position):
         """Otwiera pozycję w oknie edycji"""
         try:
+            # Podświetl nową pozycję w głównym oknie - NOWE!
+            self.data_viewer.highlight_ticket(position['ticket'])
+            
             # Przygotuj values w formacie odpowiednim dla EditDialog
             from utils.date_utils import format_time_for_display
             from utils.formatting import format_profit_points, format_checkbox_value
@@ -216,6 +242,11 @@ class EditNavigationHandler:
                     if item_values[ticket_col_index] == str(position['ticket']):
                         self.data_viewer.tree.item(item, values=tuple(updated_values))
                         break
+            
+            # Callback do podświetlania przy nawigacji - NOWE!
+            def on_navigation_callback(new_ticket):
+                """Wywoływany gdy zmieni się edytowana pozycja"""
+                self.data_viewer.highlight_ticket(new_ticket)
             
             # Otwórz nowe okno edycji
             self.data_viewer.edit_manager.open_edit_window(

@@ -843,6 +843,9 @@ class DataViewer:
             messagebox.showerror("Błąd", "Nie można pobrać numeru ticket")
             return
 
+        # Podświetl klikniętą pozycję - NOWE!
+        self.highlight_ticket(ticket)
+
         # Callback do aktualizacji widoku po zapisaniu
         def on_save_callback(updated_values):
             """Aktualizuje widok tabeli po zapisaniu zmian"""
@@ -919,3 +922,41 @@ class DataViewer:
                 
             except Exception as e:
                 messagebox.showerror("Błąd", f"Nie można zapisać pliku:\n{e}")
+    
+    def highlight_ticket(self, ticket):
+        """Podświetla (zaznacza) pozycję z podanym ticket w tabeli"""
+        try:
+            # Normalizuj ticket do porównania
+            def normalize_ticket(t):
+                if t is None:
+                    return ""
+                s = str(t).strip().rstrip('\x00').rstrip('\0')
+                s = ''.join(char for char in s if char.isprintable())
+                return s
+            
+            target_ticket = normalize_ticket(ticket)
+            ticket_col_index = COLUMNS.index("ticket")
+            
+            # Przejdź przez wszystkie elementy w tabeli
+            for item in self.tree.get_children():
+                item_values = self.tree.item(item, "values")
+                if len(item_values) > ticket_col_index:
+                    item_ticket = normalize_ticket(item_values[ticket_col_index])
+                    
+                    if item_ticket == target_ticket:
+                        # Zaznacz element
+                        self.tree.selection_set(item)
+                        self.tree.focus(item)
+                        
+                        # Przewiń tabelu żeby element był widoczny
+                        self.tree.see(item)
+                        
+                        print(f"[DataViewer] Podświetlono ticket: {ticket}")
+                        return True
+            
+            print(f"[DataViewer] Nie znaleziono ticket do podświetlenia: {ticket}")
+            return False
+            
+        except Exception as e:
+            print(f"[DataViewer] Błąd podświetlania ticket: {e}")
+            return False
