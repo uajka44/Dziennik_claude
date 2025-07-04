@@ -261,13 +261,6 @@ class DataViewer:
             command=self._restore_from_backup
         ).grid(row=1, column=2, padx=5, pady=5)
         
-        # Przycisk ustawień monitora
-        ttk.Button(
-            self.filter_frame, 
-            text="Ustawienia monitora", 
-            command=self._show_monitor_settings
-        ).grid(row=1, column=3, padx=5, pady=5)
-        
         # === SEKCJA WYBORU DAT ===
         self.date_frame = ttk.LabelFrame(self.parent, text="Zakres dat")
         self.date_frame.pack(fill="x", padx=10, pady=10)
@@ -639,74 +632,6 @@ class DataViewer:
             
         except Exception as e:
             print(f"[DataViewer] Błąd obsługi nowego zlecenia: {e}")
-    
-    def _show_monitor_settings(self):
-        """Pokazuje okno ustawień monitora"""
-        try:
-            # Tworzy okno ustawień
-            settings_window = tk.Toplevel(self.parent)
-            settings_window.title("Ustawienia monitora nowych zleceń")
-            settings_window.geometry("400x300")
-            settings_window.transient(self.parent)
-            settings_window.grab_set()
-            
-            # Główny frame
-            main_frame = ttk.Frame(settings_window, padding=20)
-            main_frame.pack(fill="both", expand=True)
-            
-            # Status monitora
-            status = self.order_monitor.get_status()
-            status_text = "🟢 Włączony" if status['is_running'] else "🔴 Wyłączony"
-            
-            ttk.Label(main_frame, text=f"Status: {status_text}", 
-                     font=("Arial", 10, "bold")).pack(pady=10)
-            
-            # Interwał sprawdzania
-            ttk.Label(main_frame, text="Interwał sprawdzania (sekundy):").pack(pady=5)
-            
-            interval_var = tk.IntVar(value=status['check_interval'])
-            interval_spinner = tk.Spinbox(main_frame, from_=5, to=300, 
-                                        textvariable=interval_var, width=10)
-            interval_spinner.pack(pady=5)
-            
-            # Przyciski kontrolne
-            button_frame = ttk.Frame(main_frame)
-            button_frame.pack(pady=20)
-            
-            def start_monitor():
-                self.order_monitor.set_check_interval(interval_var.get())
-                self.order_monitor.start_monitoring()
-                settings_window.destroy()
-            
-            def stop_monitor():
-                self.order_monitor.stop_monitoring()
-                settings_window.destroy()
-            
-            if status['is_running']:
-                ttk.Button(button_frame, text="Zatrzymaj", 
-                          command=stop_monitor).pack(side="left", padx=5)
-            else:
-                ttk.Button(button_frame, text="Uruchom", 
-                          command=start_monitor).pack(side="left", padx=5)
-            
-            ttk.Button(button_frame, text="Zastosuj interwał", 
-                      command=lambda: self.order_monitor.set_check_interval(interval_var.get())).pack(side="left", padx=5)
-            
-            ttk.Button(button_frame, text="Zamknij", 
-                      command=settings_window.destroy).pack(side="left", padx=5)
-            
-            # Informacje
-            info_frame = ttk.LabelFrame(main_frame, text="Informacje")
-            info_frame.pack(fill="x", pady=10)
-            
-            ttk.Label(info_frame, 
-                     text=f"Znanych ticketów: {status['known_tickets_count']}").pack(padx=10, pady=2)
-            ttk.Label(info_frame, 
-                     text=f"Aktywnych callbacków: {status['callbacks_count']}").pack(padx=10, pady=2)
-            
-        except Exception as e:
-            print(f"[DataViewer] Błąd ustawień monitora: {e}")
-            messagebox.showerror("Błąd", f"Nie można otworzyć ustawień:\n{e}")
     
     def load_data(self):
         """Ładuje dane z bazy danych dla podanego zakresu dat i wybranych instrumentów"""

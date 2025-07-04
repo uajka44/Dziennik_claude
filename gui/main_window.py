@@ -135,18 +135,26 @@ class MainWindow:
         """Otwiera okno ustawień"""
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Ustawienia")
-        settings_window.geometry("400x300")
+        settings_window.geometry("500x400")
         settings_window.transient(self.root)
         settings_window.grab_set()
         
-        # Sekcja konfiguracji okien
-        window_frame = ttk.LabelFrame(settings_window, text="Konfiguracja okien")
-        window_frame.pack(fill="x", padx=10, pady=10)
+        # Główny notebook dla sekcji ustawień
+        settings_notebook = ttk.Notebook(settings_window)
+        settings_notebook.pack(fill="both", expand=True, padx=10, pady=10)
         
-        ttk.Label(window_frame, 
+        # === ZAKIŁADKA: OKNA ===
+        window_frame = ttk.Frame(settings_notebook)
+        settings_notebook.add(window_frame, text="Okna")
+        
+        # Sekcja konfiguracji okien
+        window_config_frame = ttk.LabelFrame(window_frame, text="Konfiguracja okien")
+        window_config_frame.pack(fill="x", padx=10, pady=10)
+        
+        ttk.Label(window_config_frame, 
                  text="Resetuj pozycje i rozmiary okien:").pack(pady=5)
         
-        button_frame = ttk.Frame(window_frame)
+        button_frame = ttk.Frame(window_config_frame)
         button_frame.pack(pady=5)
         
         ttk.Button(button_frame, 
@@ -161,10 +169,126 @@ class MainWindow:
                   text="Reset wszystkich", 
                   command=lambda: self._reset_window_config(None)).pack(side="left", padx=5)
         
+        # === ZAKIŁADKA: MONITOR ===
+        monitor_frame = ttk.Frame(settings_notebook)
+        settings_notebook.add(monitor_frame, text="Monitor")
+        
+        # Dodaj ustawienia monitora
+        self._create_monitor_settings(monitor_frame)
+        
         # Przycisk zamknij
         ttk.Button(settings_window, 
                   text="Zamknij", 
-                  command=settings_window.destroy).pack(pady=20)
+                  command=settings_window.destroy).pack(pady=10)
+    
+    def _create_monitor_settings(self, parent_frame):
+        """Tworzy sekcję ustawień monitora"""
+        try:
+            from monitoring.order_monitor import get_order_monitor
+            monitor = get_order_monitor()
+            
+            # Status monitora
+            status_frame = ttk.LabelFrame(parent_frame, text="Status monitora")
+            status_frame.pack(fill="x", padx=10, pady=10)
+            
+            status = monitor.get_status()
+            status_text = "🟢 Włączony" if status['is_running'] else "🔴 Wyłączony"
+            
+            self.monitor_status_label = ttk.Label(status_frame, text=f"Status: {status_text}", 
+                                                  font=("Arial", 10, "bold"))
+            self.monitor_status_label.pack(pady=10)
+            
+            # Ustawienia monitora
+            config_frame = ttk.LabelFrame(parent_frame, text="Konfiguracja")
+            config_frame.pack(fill="x", padx=10, pady=10)
+            
+            # Interwał sprawdzania
+            ttk.Label(config_frame, text="Interwał sprawdzania (sekundy):").pack(pady=5)
+            
+            interval_frame = ttk.Frame(config_frame)
+            interval_frame.pack(pady=5)
+            
+            self.interval_var = tk.IntVar(value=status['check_interval'])
+            interval_spinner = tk.Spinbox(interval_frame, from_=5, to=300, 
+                                        textvariable=self.interval_var, width=10)
+            interval_spinner.pack(side="left", padx=5)
+            
+            ttk.Button(interval_frame, text="Zastosuj", 
+                      command=lambda: self._apply_monitor_interval(monitor)).pack(side="left", padx=5)
+            
+            # Przyciski kontrolne
+            control_frame = ttk.LabelFrame(parent_frame, text="Kontrola")
+            control_frame.pack(fill="x", padx=10, pady=10)
+            
+            button_control_frame = ttk.Frame(control_frame)
+            button_control_frame.pack(pady=10)
+            
+            if status['is_running']:
+                ttk.Button(button_control_frame, text="Zatrzymaj monitor", 
+                          command=lambda: self._stop_monitor(monitor)).pack(side="left", padx=5)
+            else:
+                ttk.Button(button_control_frame, text="Uruchom monitor", 
+                          command=lambda: self._start_monitor(monitor)).pack(side="left", padx=5)
+            
+            ttk.Button(button_control_frame, text="Test dźwięku", 
+                      command=self._test_monitor_sound).pack(side="left", padx=5)
+            
+            # Informacje
+            info_frame = ttk.LabelFrame(parent_frame, text="Informacje")
+            info_frame.pack(fill="x", padx=10, pady=10)
+            
+            ttk.Label(info_frame, 
+                     text=f"Znanych ticketów: {status['known_tickets_count']}").pack(padx=10, pady=2)
+            ttk.Label(info_frame, 
+                     text=f"Aktywnych callbacków: {status['callbacks_count']}").pack(padx=10, pady=2)
+            
+        except Exception as e:
+            ttk.Label(parent_frame, 
+                     text=f"Błąd ładowania ustawień monitora: {e}", 
+                     foreground="red").pack(padx=10, pady=10)
+    
+    def _apply_monitor_interval(self, monitor):
+        """Stosuje nowy interwał monitora"""
+        try:
+            interval = self.interval_var.get()
+            monitor.set_check_interval(interval)
+            messagebox.showinfo("Sukces", f"Ustawiono interwał: {interval} sekund")
+        except Exception as e:
+            messagebox.showerror("Błąd", f"Nie można ustawić interwału: {e}")
+    
+    def _start_monitor(self, monitor):
+        """Uruchamia monitor"""
+        try:
+            interval = self.interval_var.get()
+            monitor.set_check_interval(interval)
+            monitor.start_monitoring()
+            self.monitor_status_label.config(text="Status: 🟢 Włączony")
+            messagebox.showinfo("Sukces", "Monitor uruchomiony")
+        except Exception as e:
+            messagebox.showerror("Błąd", f"Nie można uruchomić monitora: {e}")
+    
+    def _stop_monitor(self, monitor):
+        """Zatrzymuje monitor"""
+        try:
+            monitor.stop_monitoring()
+            self.monitor_status_label.config(text="Status: 🔴 Wyłączony")
+            messagebox.showinfo("Sukces", "Monitor zatrzymany")
+        except Exception as e:
+            messagebox.showerror("Błąd", f"Nie można zatrzymać monitora: {e}")
+    
+    def _test_monitor_sound(self):
+        """Testuje dźwięk monitora"""
+        try:
+            import winsound
+            winsound.Beep(800, 200)
+            messagebox.showinfo("Test dźwięku", "Dźwięk został odegrany!")
+        except ImportError:
+            try:
+                import os
+                os.system('printf "\a"; sleep 0.1; printf "\a"')
+                messagebox.showinfo("Test dźwięku", "Dźwięk został odegrany!")
+            except:
+                messagebox.showwarning("Test dźwięku", "Brak obsługi dźwięku na tym systemie")
     
     def _reset_window_config(self, window_name):
         """Resetuje konfigurację okien"""
