@@ -1,5 +1,6 @@
 """
 Dialog edycji transakcji - wydzielony z data_viewer.py
+Wersja zaktualizowana: kompaktowy layout z lampką statusu
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -36,10 +37,11 @@ class EditDialog:
         # Tworzenie okna dialogowego
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(f"Edytuj transakcję - Ticket: {ticket}")
-        self.dialog.geometry("700x900")  # Większe okno
-        self.dialog.minsize(650, 800)  # Minimalne rozmiary
+        self.dialog.geometry("435x900")  # Zmniejszona szerokość o 15px
+        self.dialog.minsize(435, 900)  # Te same minimalne rozmiary
+        self.dialog.resizable(False, False)  # Zablokowane zmiany rozmiaru
         
-        # Manager konfiguracji okien - PRZED zastosowaniem konfiguracji
+        # Manager konfiguracji okien - z nowymi ustawieniami
         from gui.window_config import WindowConfigManager
         self.window_config = WindowConfigManager()
         
@@ -52,6 +54,9 @@ class EditDialog:
         # Widgets do przechowywania
         self.entry_widgets = {}
         self.checkbox_vars = {}
+        
+        # Status lampka
+        self.status_indicator = None
         
         self._create_widgets()
         
@@ -66,13 +71,21 @@ class EditDialog:
         main_frame = ttk.Frame(self.dialog, padding=10)
         main_frame.pack(fill="both", expand=True)
         
-        # Nagłówek z informacją o ticket
+        # Kompaktowy nagłówek z lampką statusu
         header_frame = ttk.LabelFrame(main_frame, text="Informacje o pozycji")
-        header_frame.pack(fill="x", pady=(0, 10))
+        header_frame.pack(pady=(0, 10), anchor="w")  # Dodano anchor="w" dla wyrównania do lewej
         
-        ttk.Label(header_frame, text=f"Ticket: {self.ticket}", 
-                 font=("Arial", 10, "bold")).pack(padx=10, pady=5)
-        ttk.Label(header_frame, text=f"Data i czas: {self.values[0]}").pack(padx=10, pady=5)
+        header_content = ttk.Frame(header_frame)
+        header_content.pack(padx=10, pady=5)
+        
+        # Lampka statusu po lewej stronie
+        self.status_indicator = tk.Label(header_content, text="🟢", font=("Arial", 16))
+        self.status_indicator.pack(side="left", padx=(0, 10))
+        
+        # Ticket i data w jednej linii
+        info_text = f"Ticket: {self.ticket}, {self.values[0]}"
+        ttk.Label(header_content, text=info_text, 
+                 font=("Arial", 10, "bold")).pack(side="left")
         
         # Scrollable frame dla formularza
         canvas = tk.Canvas(main_frame)
@@ -87,53 +100,78 @@ class EditDialog:
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         
-        # Ramka edycji wewnątrz scrollable_frame
-        edit_frame = ttk.LabelFrame(scrollable_frame, text="Dane do edycji", padding=10)
-        edit_frame.pack(fill="both", expand=True)
+        # Ramka danych nieedytowalnych (2 kolumny)
+        readonly_frame = ttk.LabelFrame(scrollable_frame, text="Dane pozycji", padding=10)
+        readonly_frame.pack(fill="x", pady=(0, 10))  # Przywrócono fill="x"
         
-        # Tworzenie kontrolek do edycji dla pól tekstowych
+        # Lista pól nieedytowalnych
+        readonly_fields = ["ticket", "type", "volume", "symbol", "open_price", "sl"]
+        
+        # Rozmieszczenie w 2 kolumnach
+        col = 0
+        row = 0
+        for field in TEXT_FIELDS:
+            if field.name in readonly_fields:
+                # Etykieta
+                ttk.Label(readonly_frame, text=f"{field.display_name}:").grid(
+                    row=row, column=col*2, padx=5, pady=2, sticky="w"
+                )
+                
+                # Wartość
+                value = self.values[TEXT_FIELDS.index(field) + 1] if TEXT_FIELDS.index(field) + 1 < len(self.values) else ""
+                value_label = ttk.Label(readonly_frame, text=str(value), 
+                                      foreground="black", relief="sunken", padding=3)
+                value_label.grid(row=row, column=col*2+1, padx=5, pady=2, sticky="ew")
+                
+                # Przejście do następnej kolumny/wiersza
+                col += 1
+                if col >= 2:
+                    col = 0
+                    row += 1
+        
+        # Konfiguracja kolumn dla readonly_frame
+        readonly_frame.columnconfigure(1, weight=1)
+        readonly_frame.columnconfigure(3, weight=1)
+        
+        # Ramka edycji
+        edit_frame = ttk.LabelFrame(scrollable_frame, text="Dane do edycji", padding=10)
+        edit_frame.pack(fill="x", pady=(0, 10))  # Przywrócono fill="x"
+        
+        # Tworzenie kontrolek do edycji dla pól edytowalnych
         row_index = 0
         for i, field in enumerate(TEXT_FIELDS):
-            ttk.Label(edit_frame, text=f"{field.display_name}:").grid(
-                row=row_index, column=0, padx=5, pady=5, sticky="w"
-            )
+            if field.editable and field.name not in readonly_fields:
+                ttk.Label(edit_frame, text=f"{field.display_name}:").grid(
+                    row=row_index, column=0, padx=5, pady=5, sticky="w"
+                )
 
-            value = self.values[i + 1] if i + 1 < len(self.values) else ""
+                value = self.values[i + 1] if i + 1 < len(self.values) else ""
 
-            if field.field_type == "multiline":
-                entry = tk.Text(edit_frame, width=35, height=5)  # Szersze pola
-                entry.grid(row=row_index, column=1, padx=5, pady=5, sticky="ew")
-                entry.insert("1.0", value)
-                if not field.editable:
-                    entry.config(state="disabled")
-            elif field.name == "setup":
-                entry = SetupEntry(edit_frame, width=35)  # Szersze pola - używa nowego systemu
-                entry.grid(row=row_index, column=1, padx=5, pady=5, sticky="ew")
-                entry.insert(0, value)
-                if not field.editable:
-                    entry.config(state="readonly")
-            else:
-                entry = ttk.Entry(edit_frame, width=35)  # Szersze pola
-                entry.grid(row=row_index, column=1, padx=5, pady=5, sticky="ew")
-                entry.insert(0, value)
-                if not field.editable:
-                    entry.config(state="readonly")
+                if field.field_type == "multiline":
+                    entry = tk.Text(edit_frame, width=30, height=4)  # Mniejsze pola
+                    entry.grid(row=row_index, column=1, padx=5, pady=5, sticky="ew")
+                    entry.insert("1.0", value)
+                elif field.name == "setup":
+                    entry = SetupEntry(edit_frame, width=30)  # Mniejsze pola
+                    entry.grid(row=row_index, column=1, padx=5, pady=5, sticky="ew")
+                    entry.insert(0, value)
+                else:
+                    entry = ttk.Entry(edit_frame, width=30)  # Mniejsze pola
+                    entry.grid(row=row_index, column=1, padx=5, pady=5, sticky="ew")
+                    entry.insert(0, value)
 
-            self.entry_widgets[field.name] = entry
-            row_index += 1
+                self.entry_widgets[field.name] = entry
+                row_index += 1
 
-        # Separator
-        ttk.Separator(edit_frame, orient="horizontal").grid(
-            row=row_index, column=0, columnspan=2, sticky="ew", pady=10
-        )
-        row_index += 1
-
-        # Checkboxy
-        checkbox_label_frame = ttk.LabelFrame(edit_frame, text="Opcje")
-        checkbox_label_frame.grid(row=row_index, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
+        # Konfiguracja grid dla edit_frame
+        edit_frame.columnconfigure(1, weight=1)
+        
+        # Checkboxy w ramce opcje
+        checkbox_label_frame = ttk.LabelFrame(scrollable_frame, text="Opcje", padding=10)
+        checkbox_label_frame.pack(fill="x", pady=(0, 10))  # Przywrócono fill="x"
 
         checkbox_frame = ttk.Frame(checkbox_label_frame)
-        checkbox_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        checkbox_frame.pack(fill="x")
 
         checkboxes_per_row = 3
         for i, field in enumerate(CHECKBOX_FIELDS):
@@ -148,17 +186,10 @@ class EditDialog:
             checkbox.grid(row=row, column=col, padx=10, pady=5, sticky="w")
 
             self.checkbox_vars[field.name] = var
-
-        # Konfiguracja grid dla edit_frame
-        edit_frame.columnconfigure(1, weight=1)
         
-        # Pack canvas i scrollbar
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Przyciski na dole
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill="x", pady=(10, 0))
+        # Przyciski na samym dole scrollable_frame - po ramce opcje
+        button_frame = ttk.Frame(scrollable_frame)
+        button_frame.pack(pady=(20, 10))  # Usunięto fill="x"
         
         # Lewa strona - nawigacja
         nav_frame = ttk.Frame(button_frame)
@@ -177,13 +208,19 @@ class EditDialog:
         ttk.Button(action_frame, text="Zapisz", command=self._save_changes).pack(side="left", padx=5)
         ttk.Button(action_frame, text="Anuluj", command=self._cancel).pack(side="left", padx=5)
         
-        # Informacja o komunikacji z MQL5
-        info_frame = ttk.LabelFrame(main_frame, text="Status")
-        info_frame.pack(fill="x", pady=(10, 0))
-        
-        ttk.Label(info_frame, 
-                 text=f"🔗 MQL5 wie że edytujesz ticket: {self.ticket}",
-                 foreground="green").pack(padx=10, pady=5)
+        # Pack canvas i scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+    
+    def _update_status_indicator(self, status="success"):
+        """Aktualizuje lampkę statusu"""
+        if self.status_indicator:
+            if status == "success":
+                self.status_indicator.config(text="🟢")  # Zielona lampka
+            elif status == "error":
+                self.status_indicator.config(text="🔴")  # Czerwona lampka
+            elif status == "working":
+                self.status_indicator.config(text="🟡")  # Żółta lampka
     
     def _play_success_sound(self):
         """Odgrywa dźwięk sukcesu po zapisaniu"""
@@ -202,6 +239,8 @@ class EditDialog:
     
     def _save_changes(self):
         """Zapisuje zmiany do bazy danych"""
+        self._update_status_indicator("working")
+        
         try:
             new_values = {}
             
@@ -255,13 +294,15 @@ class EditDialog:
                     
                     self.on_save_callback(updated_values)
 
-                # Odegraj dźwięk sukcesu zamiast okienka
+                # Sukces
+                self._update_status_indicator("success")
                 self._play_success_sound()
                 print(f"[EditDialog] ✅ Zapisano zmiany dla ticket: {self.ticket}")
                 self._close_dialog()
 
         except Exception as e:
             print(f"[EditDialog] Błąd zapisu: {e}")
+            self._update_status_indicator("error")
             messagebox.showerror("Błąd bazy danych", f"Nie można zaktualizować danych: {e}")
     
     def _cancel(self):
@@ -351,6 +392,7 @@ class EditDialog:
 
         except Exception as e:
             print(f"[EditDialog] Błąd zapisu: {e}")
+            self._update_status_indicator("error")
             messagebox.showerror("Błąd bazy danych", f"Nie można zaktualizować danych: {e}")
             return False
     

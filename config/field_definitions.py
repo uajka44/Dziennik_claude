@@ -25,7 +25,7 @@ TEXT_FIELDS = [
     FormField("symbol", "Symbol", editable=False),
     FormField("open_price", "Cena otwarcia", editable=False),
     FormField("sl", "SL", editable=True),
-    FormField("sl_opening", "SL (opening)", editable=False),
+    FormField("sl_opening", "SL (opening)", editable=True),
     FormField("profit_points", "Profit", editable=False),
     FormField("setup", "Setup", editable=True),
     FormField("uwagi", "Uwagi", editable=True, field_type="multiline"),
