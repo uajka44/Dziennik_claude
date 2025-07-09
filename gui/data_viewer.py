@@ -262,18 +262,20 @@ class DataViewer:
         # Załaduj setupy i dodaj do dropdown
         self._load_available_setups()
         
-        # Filtr Usuń 007 - Magic Number
-        ttk.Label(self.filter_frame, text="Usuń 007:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        # Filtr Wątpliwe trejdy - lista rozwijana
+        ttk.Label(self.filter_frame, text="Wątpliwe trejdy:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
         
-        # Checkbox do usuwania trejdów z magic_number = 7
-        self.remove_007_filter_var = tk.BooleanVar(value=False)  # Domyślnie odznaczony
-        self.remove_007_checkbox = ttk.Checkbutton(
+        # Lista rozwijana z opcjami filtrowania
+        self.suspicious_trades_var = tk.StringVar(value="nieaktywny")  # Domyślnie nieaktywny
+        self.suspicious_trades_combo = ttk.Combobox(
             self.filter_frame,
-            text="Usuń 007",
-            variable=self.remove_007_filter_var,
-            command=self.load_data
+            textvariable=self.suspicious_trades_var,
+            values=["nieaktywny", "tylko wątpliwe", "nie pokazuj wątpliwych"],
+            state="readonly",
+            width=20
         )
-        self.remove_007_checkbox.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+        self.suspicious_trades_combo.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+        self.suspicious_trades_combo.bind("<<ComboboxSelected>>", lambda e: self.load_data())
         
         # Przyciski diagnostyczne i narzędzia zostały przeniesione do menu Narzędzia -> Ustawienia
         
@@ -788,16 +790,21 @@ class DataViewer:
                     self.winrate_label.config(text="0.00%")
                     return
             
-            # Warunek dla filtra Usuń 007
-            remove_007_filter_active = self.remove_007_filter_var.get()
-            if remove_007_filter_active:
-                # Jeśli filtr "Usuń 007" jest zaznaczony, ukryj trejdy z magic_number = 7
+            # Warunek dla filtra Wątpliwe trejdy
+            suspicious_filter = self.suspicious_trades_var.get()
+            if suspicious_filter == "tylko wątpliwe":
+                # Pokazuj tylko trejdy z magic_number = 7
+                where_conditions.append("magic_number = ?")
+                base_params.append(7)
+                print("Filtr 'Wątpliwe trejdy' - pokazuję tylko wątpliwe (magic_number = 7)")
+            elif suspicious_filter == "nie pokazuj wątpliwych":
+                # Ukryj trejdy z magic_number = 7
                 where_conditions.append("(magic_number IS NULL OR magic_number != ?)")
                 base_params.append(7)
-                print("Filtr 'Usuń 007' aktywny - ukrywam trejdy z magic_number = 7")
-            else:
-                # Jeśli filtr "Usuń 007" jest odznaczony, pokazuj wszystkie trejdy
-                print("Filtr 'Usuń 007' nieaktywny - pokazuję wszystkie trejdy")
+                print("Filtr 'Wątpliwe trejdy' - ukrywam wątpliwe (magic_number = 7)")
+            else:  # nieaktywny
+                # Nie dodawaj żadnych warunków - pokazuj wszystkie trejdy
+                print("Filtr 'Wątpliwe trejdy' - nieaktywny, pokazuję wszystkie trejdy")
             
             # Złóż zapytanie
             where_clause = " AND ".join(where_conditions)
