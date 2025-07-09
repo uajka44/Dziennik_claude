@@ -3,7 +3,7 @@ Przeglądarka danych transakcji (zrefaktoryzowana wersja oryginalnego DatabaseVi
 """
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-from datetime import date
+from datetime import date, timedelta
 import csv
 from tkcalendar import DateEntry
 from config.field_definitions import (
@@ -291,12 +291,19 @@ class DataViewer:
         
         self.today_button = ttk.Button(self.date_frame, text="Dzisiaj", command=self._set_today)
         self.today_button.grid(row=2, column=2, padx=5, pady=5)
+        
+        # Przyciski nawigacji po dniach
+        self.prev_day_button = ttk.Button(self.date_frame, text="Prev", command=self._prev_day)
+        self.prev_day_button.grid(row=2, column=3, padx=5, pady=5)
+        
+        self.next_day_button = ttk.Button(self.date_frame, text="Next", command=self._next_day)
+        self.next_day_button.grid(row=2, column=4, padx=5, pady=5)
 
         # === SEKCJA PODSUMOWANIA ===
-        ttk.Separator(self.date_frame, orient="horizontal").grid(row=3, column=0, columnspan=3, sticky="ew", pady=5)
+        ttk.Separator(self.date_frame, orient="horizontal").grid(row=3, column=0, columnspan=5, sticky="ew", pady=5)
 
         self.summary_frame = ttk.Frame(self.date_frame)
-        self.summary_frame.grid(row=4, column=0, columnspan=3, sticky="ew", padx=5, pady=5)
+        self.summary_frame.grid(row=4, column=0, columnspan=5, sticky="ew", padx=5, pady=5)
 
         ttk.Label(self.summary_frame, text="Suma profitu:").grid(row=0, column=0, padx=5, pady=2, sticky="w")
         self.total_profit_label = ttk.Label(self.summary_frame, text="0.00")
@@ -591,6 +598,28 @@ class DataViewer:
         today = date.today()
         self.start_date_entry.set_date(today)
         self.end_date_entry.set_date(today)
+    
+    def _prev_day(self):
+        """Przesuwa datę początkową o jeden dzień wstecz i ustawia datę końcową jako datę początkową"""
+        current_start_date = self.start_date_entry.get_date()  # get_date() zwraca obiekt date
+        new_date = current_start_date - timedelta(days=1)
+        
+        self.start_date_entry.set_date(new_date)
+        self.end_date_entry.set_date(new_date)
+        
+        # Automatycznie załaduj dane dla nowej daty
+        self.load_data()
+    
+    def _next_day(self):
+        """Przesuwa datę początkową o jeden dzień do przodu i ustawia datę końcową jako datę początkową"""
+        current_start_date = self.start_date_entry.get_date()  # get_date() zwraca obiekt date
+        new_date = current_start_date + timedelta(days=1)
+        
+        self.start_date_entry.set_date(new_date)
+        self.end_date_entry.set_date(new_date)
+        
+        # Automatycznie załaduj dane dla nowej daty
+        self.load_data()
     
     def _run_initial_migration(self):
         """Uruchamia migrację SL opening przy starcie aplikacji"""
