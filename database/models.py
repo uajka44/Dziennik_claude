@@ -41,6 +41,9 @@ class Position:
     Korekta: Optional[int] = None
     chcetrzymac: Optional[int] = None
     be: Optional[int] = None
+    skalp: Optional[int] = None
+    # Dodatkowe pola
+    magic_number: Optional[int] = None
     
     @property
     def is_buy(self) -> bool:

@@ -11,6 +11,13 @@ Zrefaktoryzowana i rozszerzona aplikacja do zarządzania dziennikiem transakcji 
 - **Uwzględnienie spread'u**: Realistyczne kalkulacje z uwzględnieniem kosztów
 - **Eksport wyników**: Zapis do CSV i bazy danych
 
+### 🎯 Filtr Magic Number 007 (NOWE!)
+- **Filtrowanie według strategii**: Pokazuj/ukrywaj trejdy z magic_number = 007
+- **Domyślnie aktywny**: Checkbox zaznaczony przy starcie aplikacji
+- **Automatyczne przeładowanie**: Zmiana filtra natychmiast aktualizuje dane
+- **Wpływ na statystyki**: Filtr dotyczy wszystkich obliczeń (profit, winrate, etc.)
+- **Integracja z innymi filtrami**: Współpracuje z filtrami instrumentów i setupów
+
 ### 🔔 Monitor nowych zleceń (NOWE!)
 - **Automatyczne wykrywanie** nowych pozycji w bazie danych
 - **Powiadomienia dźwiękowe** przy pojawieniu się nowego zlecenia
@@ -34,6 +41,32 @@ Aplikacja ma modularną architekturę z podziałem na:
 - **utils/** - narzędzia pomocnicze
 
 > 📋 **Szczegółowa struktura katalogów** dostępna w pliku `architektura.txt`
+
+## 🎯 Używanie filtra Magic Number 007
+
+### Konfiguracja bazy danych
+Przed pierwszym użyciem uruchom skrypt konfiguracyjny:
+```bash
+python setup_magic_number.py
+```
+Skrypt automatycznie:
+- Sprawdzi czy kolumna `magic_number` istnieje w bazie
+- Doda kolumnę jeśli nie istnieje
+- Pokaże statystyki magic_number
+- Opcjonalnie doda przykładowe dane testowe
+
+### Korzystanie z filtra
+1. **Uruchom aplikację**: `python main.py`
+2. **Przejdź do zakładki**: "Przeglądarka danych"
+3. **W sekcji Filtry** znajdziesz checkbox "Magic Number 007"
+4. **Zaznacz checkbox**: Pokazuje TYLKO trejdy z magic_number = 7
+5. **Odznacz checkbox**: Ukrywa trejdy z magic_number = 7
+6. **Dane są automatycznie przeładowywane** przy każdej zmianie
+
+### Testowanie
+```bash
+python test_magic_filter.py
+```
 
 ## 🚀 Uruchomienie
 

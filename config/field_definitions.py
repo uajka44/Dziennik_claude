@@ -34,7 +34,8 @@ TEXT_FIELDS = [
     FormField("trendl", "TrendL", editable=True),
     FormField("interwal", "interwal", editable=True),
     FormField("setup_param1", "param 1", editable=True),
-    FormField("setup_param2", "param 2", editable=True)
+    FormField("setup_param2", "param 2", editable=True),
+    FormField("magic_number", "Magic Number", editable=True)
 ]
 
 # Definicja pól typu checkbox
@@ -80,7 +81,8 @@ COLUMN_WIDTHS = {
     "uwagi": 150,
     "blad": 150,
     "trends": 80,
-    "trendl": 80
+    "trendl": 80,
+    "magic_number": 90
 }
 
 # Domyślna szerokość dla checkboxów

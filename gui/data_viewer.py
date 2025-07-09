@@ -262,6 +262,19 @@ class DataViewer:
         # Załaduj setupy i dodaj do dropdown
         self._load_available_setups()
         
+        # Filtr Usuń 007 - Magic Number
+        ttk.Label(self.filter_frame, text="Usuń 007:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        
+        # Checkbox do usuwania trejdów z magic_number = 7
+        self.remove_007_filter_var = tk.BooleanVar(value=False)  # Domyślnie odznaczony
+        self.remove_007_checkbox = ttk.Checkbutton(
+            self.filter_frame,
+            text="Usuń 007",
+            variable=self.remove_007_filter_var,
+            command=self.load_data
+        )
+        self.remove_007_checkbox.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+        
         # Przyciski diagnostyczne i narzędzia zostały przeniesione do menu Narzędzia -> Ustawienia
         
         # === SEKCJA WYBORU DAT ===
@@ -774,6 +787,17 @@ class DataViewer:
                     self.losing_trades_label.config(text="0")
                     self.winrate_label.config(text="0.00%")
                     return
+            
+            # Warunek dla filtra Usuń 007
+            remove_007_filter_active = self.remove_007_filter_var.get()
+            if remove_007_filter_active:
+                # Jeśli filtr "Usuń 007" jest zaznaczony, ukryj trejdy z magic_number = 7
+                where_conditions.append("(magic_number IS NULL OR magic_number != ?)")
+                base_params.append(7)
+                print("Filtr 'Usuń 007' aktywny - ukrywam trejdy z magic_number = 7")
+            else:
+                # Jeśli filtr "Usuń 007" jest odznaczony, pokazuj wszystkie trejdy
+                print("Filtr 'Usuń 007' nieaktywny - pokazuję wszystkie trejdy")
             
             # Złóż zapytanie
             where_clause = " AND ".join(where_conditions)
