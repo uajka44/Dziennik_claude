@@ -22,6 +22,9 @@ NOWE FUNKCJONALNOŚCI (CZERWIEC 2025):
     - Okno "Tickety instrumentów" w menu Narzędzia
     - Mapowanie różnych nazw (us100, nq100, nasdaq) na główne instrumenty (NASDAQ)
     - Domyślne instrumenty: DAX, NASDAQ, DJ, GOLD, BTC
+    - WAŻNE: System umożliwia granie u różnych brokerów z różnymi ticketami
+    - Przykład: DAX może być "ger40.cash" u jednego brokera, "germany40" u innego
+    - Konfiguracja w pliku instrument_tickets.json z mapowaniem nazw na główne instrumenty
 ✅ ** NAJNOWSZE (22.06.2025) ** System edycji z nawigacją:
     - Tylko jedno okno edycji w danym czasie
     - Przyciski Next/Prev do nawigacji między pozycjami

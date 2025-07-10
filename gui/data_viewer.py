@@ -279,12 +279,16 @@ class DataViewer:
         
         # Przyciski diagnostyczne i narzędzia zostały przeniesione do menu Narzędzia -> Ustawienia
         
-        # === SEKCJA WYBORU DAT ===
-        self.date_frame = ttk.LabelFrame(self.parent, text="Zakres dat")
-        self.date_frame.pack(fill="x", padx=10, pady=10)
+        # === SEKCJA WYBORU DAT I PARAMETRÓW TP ===
+        self.dates_and_tp_frame = ttk.Frame(self.parent)
+        self.dates_and_tp_frame.pack(fill="x", padx=10, pady=10)
+        
+        # === RAMKA DAT (lewa strona) ===
+        self.date_frame = ttk.LabelFrame(self.dates_and_tp_frame, text="Zakres dat")
+        self.date_frame.pack(side="left", fill="y", padx=(0, 10))
         
         # Pola do wyboru dat z kalendarza
-        ttk.Label(self.date_frame, text="Data początkowa:").grid(row=0, column=0, padx=5, pady=5)
+        ttk.Label(self.date_frame, text="Data początkowa:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.start_date_entry = DateEntry(
             self.date_frame, width=12, background='darkblue',
             foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
@@ -292,7 +296,7 @@ class DataViewer:
         )
         self.start_date_entry.grid(row=0, column=1, padx=5, pady=5)
 
-        ttk.Label(self.date_frame, text="Data końcowa:").grid(row=1, column=0, padx=5, pady=5)
+        ttk.Label(self.date_frame, text="Data końcowa:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
         self.end_date_entry = DateEntry(
             self.date_frame, width=12, background='darkblue',
             foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
@@ -302,23 +306,102 @@ class DataViewer:
 
         # Przyciski
         self.search_button = ttk.Button(self.date_frame, text="Wyszukaj", command=self.load_data)
-        self.search_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+        self.search_button.grid(row=2, column=0, padx=5, pady=5)
         
         self.today_button = ttk.Button(self.date_frame, text="Dzisiaj", command=self._set_today)
-        self.today_button.grid(row=2, column=2, padx=5, pady=5)
+        self.today_button.grid(row=2, column=1, padx=5, pady=5)
         
         # Przyciski nawigacji po dniach
-        self.prev_day_button = ttk.Button(self.date_frame, text="Prev", command=self._prev_day)
-        self.prev_day_button.grid(row=2, column=3, padx=5, pady=5)
+        nav_frame = ttk.Frame(self.date_frame)
+        nav_frame.grid(row=3, column=0, columnspan=2, pady=5)
         
-        self.next_day_button = ttk.Button(self.date_frame, text="Next", command=self._next_day)
-        self.next_day_button.grid(row=2, column=4, padx=5, pady=5)
+        self.prev_day_button = ttk.Button(nav_frame, text="Prev", command=self._prev_day)
+        self.prev_day_button.pack(side="left", padx=5)
+        
+        self.next_day_button = ttk.Button(nav_frame, text="Next", command=self._next_day)
+        self.next_day_button.pack(side="left", padx=5)
+        
+        # === RAMKA PARAMETRÓW TP (prawa strona) ===
+        self.tp_params_frame = ttk.LabelFrame(self.dates_and_tp_frame, text="Parametry TP")
+        self.tp_params_frame.pack(side="left", fill="both", expand=True)
+        
+        # Konfiguracja kolumn dla równego rozkładu
+        self.tp_params_frame.columnconfigure(0, weight=1)
+        self.tp_params_frame.columnconfigure(1, weight=1)
+        self.tp_params_frame.columnconfigure(2, weight=1)
+        
+        # Import potrzebnych komponentów
+        from gui.widgets.custom_entries import NumericEntry
+        from gui.widgets.date_picker import StopLossSelector
+        
+        # === TYPY STOP LOSS ===
+        self.sl_selector = StopLossSelector(self.tp_params_frame)
+        self.sl_selector.grid(row=0, column=0, padx=10, pady=10, sticky="nw")
+        
+        # === SPREAD ===
+        spread_frame = ttk.LabelFrame(self.tp_params_frame, text="Spread")
+        spread_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nw")
+        
+        ttk.Label(spread_frame, text="Spread:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.spread_entry = NumericEntry(spread_frame, width=10, allow_decimal=True)
+        self.spread_entry.insert(0, "0")
+        self.spread_entry.grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(spread_frame, text="pkt").grid(row=0, column=2, padx=2, pady=5)
+        
+        # === BREAK EVEN ===
+        be_frame = ttk.LabelFrame(self.tp_params_frame, text="Break Even")
+        be_frame.grid(row=0, column=2, padx=10, pady=10, sticky="nw")
+        
+        # BE Prog
+        ttk.Label(be_frame, text="Próg BE:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.be_prog_entry = NumericEntry(be_frame, width=10, allow_decimal=True)
+        self.be_prog_entry.insert(0, "10.0")
+        self.be_prog_entry.grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(be_frame, text="pkt").grid(row=0, column=2, padx=2, pady=5)
+        
+        # BE Offset
+        ttk.Label(be_frame, text="Offset BE:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.be_offset_entry = NumericEntry(be_frame, width=10, allow_decimal=True)
+        self.be_offset_entry.insert(0, "1.0")
+        self.be_offset_entry.grid(row=1, column=1, padx=5, pady=5)
+        ttk.Label(be_frame, text="pkt").grid(row=1, column=2, padx=2, pady=5)
+        
+        # === DODATKOWE OPCJE ===
+        options_frame = ttk.LabelFrame(self.tp_params_frame, text="Opcje")
+        options_frame.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="ew")
+        
+        # Checkbox szczegółowe logi
+        self.detailed_logs_var = tk.BooleanVar()
+        self.detailed_logs_cb = ttk.Checkbutton(
+            options_frame, 
+            text="Szczegółowe logi (analiza świeczka po świeczce)", 
+            variable=self.detailed_logs_var
+        )
+        self.detailed_logs_cb.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        
+        # Checkbox zapisz do bazy
+        self.save_to_db_var = tk.BooleanVar()
+        self.save_to_db_cb = ttk.Checkbutton(
+            options_frame, 
+            text="Zapisz wyniki do bazy danych", 
+            variable=self.save_to_db_var
+        )
+        self.save_to_db_cb.grid(row=0, column=1, padx=20, pady=5, sticky="w")
+        
+        # Przycisk oblicz TP
+        self.calculate_tp_button = ttk.Button(
+            options_frame,
+            text="Oblicz TP dla zakresu",
+            command=self._calculate_tp_for_range
+        )
+        self.calculate_tp_button.grid(row=1, column=0, columnspan=2, padx=5, pady=10)
 
         # === SEKCJA PODSUMOWANIA ===
-        ttk.Separator(self.date_frame, orient="horizontal").grid(row=3, column=0, columnspan=5, sticky="ew", pady=5)
+        summary_separator = ttk.Separator(self.date_frame, orient="horizontal")
+        summary_separator.grid(row=4, column=0, columnspan=2, sticky="ew", pady=5)
 
         self.summary_frame = ttk.Frame(self.date_frame)
-        self.summary_frame.grid(row=4, column=0, columnspan=5, sticky="ew", padx=5, pady=5)
+        self.summary_frame.grid(row=5, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
 
         ttk.Label(self.summary_frame, text="Suma profitu:").grid(row=0, column=0, padx=5, pady=2, sticky="w")
         self.total_profit_label = ttk.Label(self.summary_frame, text="0.00")
@@ -1020,3 +1103,280 @@ class DataViewer:
         except Exception as e:
             print(f"[DataViewer] Błąd podświetlania ticket: {e}")
             return False
+    
+    def _calculate_tp_for_range(self):
+        """Oblicza TP dla aktualnego zakresu dat używając nowych parametrów"""
+        try:
+            print("[DataViewer] Rozpoczynam kalkulację TP dla zakresu...")
+            
+            # Pobierz parametry z nowych pól
+            start_date = self.start_date_entry.get()
+            end_date = self.end_date_entry.get()
+            
+            # Pobierz wybrane instrumenty
+            selected_instruments = self.instruments_dropdown.get_selected()
+            if not selected_instruments:
+                messagebox.showerror("Błąd", "Wybierz przynajmniej jeden instrument")
+                return
+            
+            # Pobierz parametry SL
+            sl_types = self.sl_selector.get_selected_sl_types()
+            if not any(sl_types.values()):
+                messagebox.showerror("Błąd", "Wybierz przynajmniej jeden typ Stop Loss")
+                return
+            
+            sl_staly_values = self.sl_selector.get_sl_staly_values()
+            
+            # Pobierz parametry BE
+            be_prog = self.be_prog_entry.get_float()
+            be_offset = self.be_offset_entry.get_float()
+            
+            # Pobierz spread
+            spread = self.spread_entry.get_float() or 0
+            
+            # Pobierz opcje
+            detailed_logs = self.detailed_logs_var.get()
+            save_to_db = self.save_to_db_var.get()
+            
+            print(f"[DataViewer] Parametry kalkulacji:")
+            print(f"  - Daty: {start_date} - {end_date}")
+            print(f"  - Instrumenty: {selected_instruments}")
+            print(f"  - SL typy: {sl_types}")
+            print(f"  - SL stały: {sl_staly_values}")
+            print(f"  - BE: prog={be_prog}, offset={be_offset}")
+            print(f"  - Spread: {spread}")
+            print(f"  - Opcje: detailed_logs={detailed_logs}, save_to_db={save_to_db}")
+            
+            # Walidacja parametrów BE
+            if sl_types.get('sl_staly', False) and be_prog is not None and be_offset is not None:
+                if be_prog <= 0 or be_offset <= 0:
+                    messagebox.showerror("Błąd", "Parametry Break Even muszą być dodatnie")
+                    return
+            
+            # Walidacja spread
+            if spread < 0:
+                messagebox.showerror("Błąd", "Spread nie może być ujemny")
+                return
+            
+            # Importuj i uruchom kalkulator
+            from calculations.tp_calculator import TPCalculator
+            
+            print("[DataViewer] Uruchamianie kalkulatora TP...")
+            calculator = TPCalculator()
+            
+            # Wyłącz przycisk na czas obliczeń
+            self.calculate_tp_button.config(state="disabled", text="Obliczam...")
+            
+            # Wykonaj kalkulację
+            results = calculator.calculate_tp_for_date_range(
+                start_date=start_date,
+                end_date=end_date,
+                instruments=selected_instruments,
+                sl_types=sl_types,
+                sl_staly_values=sl_staly_values,
+                be_prog=be_prog,
+                be_offset=be_offset,
+                spread=spread,
+                save_to_db=save_to_db,
+                detailed_logs=detailed_logs
+            )
+            
+            print(f"[DataViewer] Kalkulacja zakończona. Wyników: {len(results)}")
+            
+            # Pokaż wyniki
+            self._show_tp_results(results, calculator)
+            
+        except Exception as e:
+            print(f"[DataViewer] Błąd kalkulacji TP: {e}")
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Błąd kalkulacji", f"Nie można obliczyć TP:\n{e}")
+        
+        finally:
+            # Przywróć przycisk
+            self.calculate_tp_button.config(state="normal", text="Oblicz TP dla zakresu")
+    
+    def _show_tp_results(self, results, calculator):
+        """Pokazuje wyniki kalkulacji TP w osobnym oknie"""
+        try:
+            # Utwórz okno wyników
+            results_window = tk.Toplevel(self.parent)
+            results_window.title(f"Wyniki kalkulacji TP - {len(results)} pozycji")
+            results_window.geometry("1000x600")
+            
+            # Główna ramka
+            main_frame = ttk.Frame(results_window)
+            main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+            
+            # === TABELA WYNIKÓW ===
+            results_frame = ttk.LabelFrame(main_frame, text="Wyniki kalkulacji")
+            results_frame.pack(fill="both", expand=True, pady=(0, 10))
+            
+            # Scrollbary
+            v_scrollbar = ttk.Scrollbar(results_frame, orient="vertical")
+            h_scrollbar = ttk.Scrollbar(results_frame, orient="horizontal")
+            
+            # Kolumny wyników
+            columns = [
+                "ticket", "symbol", "type", "open_time", "open_price", 
+                "setup", "tp_sl_staly", "tp_sl_recznie", "tp_sl_be"
+            ]
+            
+            # Treeview
+            results_tree = ttk.Treeview(
+                results_frame, 
+                columns=columns,
+                yscrollcommand=v_scrollbar.set,
+                xscrollcommand=h_scrollbar.set
+            )
+            
+            v_scrollbar.config(command=results_tree.yview)
+            h_scrollbar.config(command=results_tree.xview)
+            
+            # Konfiguracja kolumn
+            results_tree.column("#0", width=0, stretch=tk.NO)
+            
+            column_config = {
+                "ticket": {"width": 80, "text": "Ticket"},
+                "symbol": {"width": 100, "text": "Symbol"},
+                "type": {"width": 60, "text": "Typ"},
+                "open_time": {"width": 120, "text": "Czas otwarcia"},
+                "open_price": {"width": 100, "text": "Cena otwarcia"},
+                "setup": {"width": 100, "text": "Setup"},
+                "tp_sl_staly": {"width": 100, "text": "TP (SL stały)"},
+                "tp_sl_recznie": {"width": 100, "text": "TP (SL ręczne)"},
+                "tp_sl_be": {"width": 100, "text": "TP (BE)"}
+            }
+            
+            for col in columns:
+                config = column_config[col]
+                results_tree.column(col, width=config["width"], anchor=tk.CENTER)
+                results_tree.heading(col, text=config["text"])
+            
+            # Wypełnij tabelę wynikami
+            from utils.formatting import format_points, format_price
+            
+            for i, result in enumerate(results):
+                values = (
+                    result.ticket,
+                    result.symbol,
+                    result.position_type,
+                    self._format_time(result.open_time),
+                    format_price(result.open_price),
+                    result.setup or "",
+                    format_points(result.max_tp_sl_staly) if result.max_tp_sl_staly is not None else "",
+                    format_points(result.max_tp_sl_recznie) if result.max_tp_sl_recznie is not None else "",
+                    format_points(result.max_tp_sl_be) if result.max_tp_sl_be is not None else ""
+                )
+                results_tree.insert("", "end", values=values)
+            
+            # Umieszczenie elementów
+            v_scrollbar.pack(side="right", fill="y")
+            h_scrollbar.pack(side="bottom", fill="x")
+            results_tree.pack(fill="both", expand=True)
+            
+            # === PODSUMOWANIE ===
+            summary_frame = ttk.LabelFrame(main_frame, text="Podsumowanie")
+            summary_frame.pack(fill="x", pady=10)
+            
+            # Oblicz statystyki
+            summary = calculator.get_calculation_summary(results)
+            
+            # Wyświetl statystyki
+            stats_frame = ttk.Frame(summary_frame)
+            stats_frame.pack(fill="x", padx=10, pady=10)
+            
+            # Wiersz 1
+            ttk.Label(stats_frame, text="Pozycji ogółem:").grid(row=0, column=0, padx=5, pady=2, sticky="w")
+            ttk.Label(stats_frame, text=str(summary['total_positions'])).grid(row=0, column=1, padx=5, pady=2)
+            
+            ttk.Label(stats_frame, text="Udanych obliczeń:").grid(row=0, column=2, padx=5, pady=2, sticky="w")
+            ttk.Label(stats_frame, text=str(summary['successful_calculations'])).grid(row=0, column=3, padx=5, pady=2)
+            
+            # Wiersz 2 - średnie
+            ttk.Label(stats_frame, text="Średni TP (SL stały):").grid(row=1, column=0, padx=5, pady=2, sticky="w")
+            ttk.Label(stats_frame, text=f"{summary['avg_tp_sl_staly']:.1f} pkt").grid(row=1, column=1, padx=5, pady=2)
+            
+            ttk.Label(stats_frame, text="Średni TP (SL ręczne):").grid(row=1, column=2, padx=5, pady=2, sticky="w")
+            ttk.Label(stats_frame, text=f"{summary['avg_tp_sl_recznie']:.1f} pkt").grid(row=1, column=3, padx=5, pady=2)
+            
+            ttk.Label(stats_frame, text="Średni TP (BE):").grid(row=1, column=4, padx=5, pady=2, sticky="w")
+            ttk.Label(stats_frame, text=f"{summary['avg_tp_sl_be']:.1f} pkt").grid(row=1, column=5, padx=5, pady=2)
+            
+            # Wiersz 3 - maksymalne
+            ttk.Label(stats_frame, text="Max TP (SL stały):").grid(row=2, column=0, padx=5, pady=2, sticky="w")
+            ttk.Label(stats_frame, text=f"{summary['max_tp_sl_staly']:.1f} pkt").grid(row=2, column=1, padx=5, pady=2)
+            
+            ttk.Label(stats_frame, text="Max TP (SL ręczne):").grid(row=2, column=2, padx=5, pady=2, sticky="w")
+            ttk.Label(stats_frame, text=f"{summary['max_tp_sl_recznie']:.1f} pkt").grid(row=2, column=3, padx=5, pady=2)
+            
+            ttk.Label(stats_frame, text="Max TP (BE):").grid(row=2, column=4, padx=5, pady=2, sticky="w")
+            ttk.Label(stats_frame, text=f"{summary['max_tp_sl_be']:.1f} pkt").grid(row=2, column=5, padx=5, pady=2)
+            
+            # === PRZYCISKI ===
+            buttons_frame = ttk.Frame(main_frame)
+            buttons_frame.pack(fill="x", pady=10)
+            
+            # Przycisk eksportu
+            def export_results():
+                """Eksportuje wyniki do CSV"""
+                filename = filedialog.asksaveasfilename(
+                    defaultextension=".csv",
+                    filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+                    title="Zapisz wyniki jako..."
+                )
+                
+                if filename:
+                    try:
+                        import csv
+                        with open(filename, 'w', newline='', encoding='utf-8') as file:
+                            writer = csv.writer(file)
+                            
+                            # Nagłówki
+                            headers = [
+                                "Ticket", "Symbol", "Typ", "Czas otwarcia", "Cena otwarcia",
+                                "Setup", "TP (SL stały)", "TP (SL ręczne)", "TP (BE)",
+                                "SL stały", "SL ręczne", "BE prog", "BE offset", "Spread"
+                            ]
+                            writer.writerow(headers)
+                            
+                            # Dane
+                            for result in results:
+                                row = [
+                                    result.ticket,
+                                    result.symbol,
+                                    result.position_type,
+                                    self._format_time(result.open_time),
+                                    result.open_price,
+                                    result.setup or "",
+                                    result.max_tp_sl_staly or "",
+                                    result.max_tp_sl_recznie or "",
+                                    result.max_tp_sl_be or "",
+                                    result.sl_staly_value or "",
+                                    result.sl_recznie_value or "",
+                                    result.be_prog or "",
+                                    result.be_offset or "",
+                                    result.spread or ""
+                                ]
+                                writer.writerow(row)
+                        
+                        messagebox.showinfo("Sukces", f"Wyniki zostały zapisane do pliku:\n{filename}")
+                        
+                    except Exception as e:
+                        messagebox.showerror("Błąd", f"Nie można zapisać pliku:\n{e}")
+            
+            ttk.Button(buttons_frame, text="Eksportuj wyniki", command=export_results).pack(side="left", padx=5)
+            ttk.Button(buttons_frame, text="Zamknij", command=results_window.destroy).pack(side="right", padx=5)
+            
+            print(f"[DataViewer] Okno wyników utworzone z {len(results)} pozycjami")
+            
+        except Exception as e:
+            print(f"[DataViewer] Błąd tworzenia okna wyników: {e}")
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Błąd", f"Nie można pokazać wyników:\n{e}")
+    
+    def _format_time(self, unix_timestamp):
+        """Formatuje timestamp do wyświetlenia"""
+        from utils.date_utils import format_time_for_display
+        return format_time_for_display(unix_timestamp)
