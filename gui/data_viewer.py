@@ -1105,19 +1105,37 @@ class DataViewer:
             return False
     
     def _calculate_tp_for_range(self):
-        """Oblicza TP dla aktualnego zakresu dat używając nowych parametrów"""
+        """Oblicza TP dla aktualnie wyświetlanych pozycji (uwzględnia wszystkie filtry)"""
         try:
-            print("[DataViewer] Rozpoczynam kalkulację TP dla zakresu...")
+            print("[DataViewer] Rozpoczynam kalkulację TP dla przefiltrowanych danych...")
             
-            # Pobierz parametry z nowych pól
-            start_date = self.start_date_entry.get()
-            end_date = self.end_date_entry.get()
+            # OPCJA A: Pobierz tickety z aktualnie wyświetlanych danych w tabeli
+            displayed_tickets = []
+            ticket_col_index = None
             
-            # Pobierz wybrane instrumenty
-            selected_instruments = self.instruments_dropdown.get_selected()
-            if not selected_instruments:
-                messagebox.showerror("Błąd", "Wybierz przynajmniej jeden instrument")
+            # Znajdź indeks kolumny ticket
+            from config.field_definitions import COLUMNS
+            try:
+                ticket_col_index = COLUMNS.index("ticket")
+            except ValueError:
+                messagebox.showerror("Błąd", "Nie znaleziono kolumny 'ticket' w tabeli")
                 return
+            
+            # Pobierz wszystkie tickety z aktualnie wyświetlanej tabeli
+            for item in self.tree.get_children():
+                values = self.tree.item(item, "values")
+                if len(values) > ticket_col_index:
+                    ticket = values[ticket_col_index]
+                    if ticket:  # Ignoruj puste tickety
+                        displayed_tickets.append(str(ticket).strip())
+            
+            print(f"[DataViewer] Znaleziono {len(displayed_tickets)} pozycji w tabeli")
+            
+            if not displayed_tickets:
+                messagebox.showwarning("Uwaga", "Brak pozycji w tabeli do obliczenia TP.\n\nUpewnij się, że:\n- Wybrano odpowiedni zakres dat\n- Filtry pozwalają na wyświetlenie pozycji")
+                return
+            
+            print(f"[DataViewer] Pierwsze 5 ticketów: {displayed_tickets[:5]}")
             
             # Pobierz parametry SL
             sl_types = self.sl_selector.get_selected_sl_types()
@@ -1139,8 +1157,7 @@ class DataViewer:
             save_to_db = self.save_to_db_var.get()
             
             print(f"[DataViewer] Parametry kalkulacji:")
-            print(f"  - Daty: {start_date} - {end_date}")
-            print(f"  - Instrumenty: {selected_instruments}")
+            print(f"  - Liczba ticketów: {len(displayed_tickets)}")
             print(f"  - SL typy: {sl_types}")
             print(f"  - SL stały: {sl_staly_values}")
             print(f"  - BE: prog={be_prog}, offset={be_offset}")
@@ -1161,17 +1178,15 @@ class DataViewer:
             # Importuj i uruchom kalkulator
             from calculations.tp_calculator import TPCalculator
             
-            print("[DataViewer] Uruchamianie kalkulatora TP...")
+            print("[DataViewer] Uruchamianie kalkulatora TP dla ticketów...")
             calculator = TPCalculator()
             
             # Wyłącz przycisk na czas obliczeń
             self.calculate_tp_button.config(state="disabled", text="Obliczam...")
             
-            # Wykonaj kalkulację
-            results = calculator.calculate_tp_for_date_range(
-                start_date=start_date,
-                end_date=end_date,
-                instruments=selected_instruments,
+            # Wykonaj kalkulację dla konkretnych ticketów (NOWA METODA)
+            results = calculator.calculate_tp_for_tickets(
+                tickets=displayed_tickets,
                 sl_types=sl_types,
                 sl_staly_values=sl_staly_values,
                 be_prog=be_prog,
@@ -1183,8 +1198,18 @@ class DataViewer:
             
             print(f"[DataViewer] Kalkulacja zakończona. Wyników: {len(results)}")
             
-            # Pokaż wyniki
-            self._show_tp_results(results, calculator)
+            # Pokaż informację o filtrach w wynikach
+            active_filters = []
+            if self.setup_filter_active_var.get():
+                selected_setups = self.setup_dropdown.get_selected()
+                active_filters.append(f"Setup: {', '.join(selected_setups)}")
+            
+            suspicious_filter = self.suspicious_trades_var.get()
+            if suspicious_filter != "nieaktywny":
+                active_filters.append(f"Wątpliwe trejdy: {suspicious_filter}")
+            
+            # Pokaż wyniki z informacją o filtrach
+            self._show_tp_results(results, calculator, active_filters)
             
         except Exception as e:
             print(f"[DataViewer] Błąd kalkulacji TP: {e}")
@@ -1196,17 +1221,26 @@ class DataViewer:
             # Przywróć przycisk
             self.calculate_tp_button.config(state="normal", text="Oblicz TP dla zakresu")
     
-    def _show_tp_results(self, results, calculator):
+    def _show_tp_results(self, results, calculator, active_filters=None):
         """Pokazuje wyniki kalkulacji TP w osobnym oknie"""
         try:
             # Utwórz okno wyników
+            filters_info = f" (z filtrami: {', '.join(active_filters)})" if active_filters else ""
             results_window = tk.Toplevel(self.parent)
-            results_window.title(f"Wyniki kalkulacji TP - {len(results)} pozycji")
-            results_window.geometry("1000x600")
+            results_window.title(f"Wyniki kalkulacji TP - {len(results)} pozycji{filters_info}")
+            results_window.geometry("1200x700")
             
             # Główna ramka
             main_frame = ttk.Frame(results_window)
             main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+            
+            # === INFO O FILTRACH ===
+            if active_filters:
+                info_frame = ttk.LabelFrame(main_frame, text="Aktywne filtry")
+                info_frame.pack(fill="x", pady=(0, 10))
+                
+                info_text = "Kalkulacja uwzględnia tylko pozycje spełniające filtry: " + ", ".join(active_filters)
+                ttk.Label(info_frame, text=info_text, foreground="blue", font=("Arial", 9)).pack(padx=10, pady=5)
             
             # === TABELA WYNIKÓW ===
             results_frame = ttk.LabelFrame(main_frame, text="Wyniki kalkulacji")

@@ -126,6 +126,72 @@ class TPCalculator:
         print(f"TPCalculator: Obliczenia zakończone. Wyników: {len(results)}")
         return results
     
+    def calculate_tp_for_tickets(self,
+                               tickets: List[str],
+                               sl_types: Dict[str, bool],
+                               sl_staly_values: Optional[Dict[str, float]] = None,
+                               be_prog: Optional[float] = None,
+                               be_offset: Optional[float] = None,
+                               spread: float = 0,
+                               save_to_db: bool = False,
+                               detailed_logs: bool = False) -> List[TPCalculationResult]:
+        """Oblicza maksymalny TP dla konkretnych ticketów (z głównej tabeli)"""
+        print(f"TPCalculator: Rozpoczynam obliczenia dla {len(tickets)} ticketów")
+        print(f"TPCalculator: Tickety: {tickets[:5]}{'...' if len(tickets) > 5 else ''}")
+        
+        # Pobierz pozycje na podstawie ticketów
+        print("TPCalculator: Pobieram pozycje dla ticketów...")
+        positions = self.position_analyzer.get_positions_by_tickets(tickets)
+        
+        print(f"TPCalculator: Znaleziono {len(positions)} pozycji")
+        
+        if not positions:
+            print("TPCalculator: Brak pozycji do analizy")
+            return []
+        
+        results = []
+        missing_data_positions = []
+        
+        for i, position in enumerate(positions):
+            print()
+            print(f"\033[94mTPCalculator: Analizuję pozycję {i+1}/{len(positions)}: {position.ticket}\033[0m")
+            
+            # Sprawdź dostępność danych świeczkowych
+            if not self.candle_analyzer.has_sufficient_data(position.symbol, position.open_time):
+                print(f"TPCalculator: Brak danych świeczkowych dla pozycji {position.ticket}")
+                missing_data_positions.append(position.ticket)
+                continue
+            
+            # Oblicz TP dla tej pozycji
+            try:
+                tp_result = self._calculate_tp_for_position(
+                    position, sl_types, sl_staly_values, be_prog, be_offset, spread, detailed_logs
+                )
+                
+                if tp_result:
+                    tp_result.calculation_date = "filtered_data"  # Oznacz że to z przefiltrowanych danych
+                    results.append(tp_result)
+                    print(f"TPCalculator: Pozycja {position.ticket} - wynik dodany")
+                else:
+                    print(f"TPCalculator: Pozycja {position.ticket} - brak wyniku")
+                    
+            except Exception as e:
+                print(f"TPCalculator: Błąd przy obliczaniu pozycji {position.ticket}: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # Zapisz do bazy danych jeśli wymagane
+        if save_to_db and results:
+            print(f"TPCalculator: Zapisuję {len(results)} wyników do bazy")
+            self._save_results_to_db(results)
+        
+        # Wyświetl komunikat o brakujących danych
+        if missing_data_positions:
+            print(f"TPCalculator: Brak danych świeczkowych dla pozycji: {', '.join(map(str, missing_data_positions))}")
+        
+        print(f"TPCalculator: Obliczenia zakończone. Wyników: {len(results)}")
+        return results
+    
     def _calculate_tp_for_position(self,
                                  position: Position,
                                  sl_types: Dict[str, bool],

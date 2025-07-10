@@ -246,3 +246,64 @@ class PositionAnalyzer:
                 instruments.add(position.symbol)
         
         return sorted(list(instruments))
+    
+    def get_positions_by_tickets(self, tickets: List[str]) -> List[Position]:
+        """
+        Pobiera pozycje dla konkretnych ticketów
+        
+        Args:
+            tickets: Lista ticketów do pobrania
+        
+        Returns:
+            Lista obiektów Position
+        """
+        if not tickets:
+            return []
+        
+        print(f"PositionAnalyzer: Pobieram pozycje dla {len(tickets)} ticketów")
+        
+        try:
+            # Używamy konkretnych kolumn potrzebnych do kalkulacji TP
+            columns = "open_time, ticket, type, volume, symbol, open_price, sl, sl_recznie, setup"
+            
+            # Budujemy zapytanie z placeholderami dla ticketów
+            placeholders = ','.join(['?' for _ in tickets])
+            query = f"""
+            SELECT {columns}
+            FROM positions 
+            WHERE ticket IN ({placeholders})
+            ORDER BY open_time
+            """
+            
+            # Konwertuj tickety na stringi dla zapytania
+            ticket_params = [str(ticket) for ticket in tickets]
+            
+            rows = self._execute_query(query, ticket_params)
+            print(f"PositionAnalyzer: Znaleziono {len(rows)} wierszy w bazie dla ticketów")
+            
+            # Debug - sprawdź pierwsze pozycje
+            if rows:
+                print(f"PositionAnalyzer: Przykładowy wiersz: {rows[0]}")
+            
+            positions = []
+            found_tickets = set()
+            
+            for row in rows:
+                position = self._row_to_position(row)
+                positions.append(position)
+                found_tickets.add(str(position.ticket))
+                print(f"PositionAnalyzer: Dodano pozycję {position.ticket} (symbol: {repr(position.symbol)})")
+            
+            # Sprawdź czy wszystkie tickety zostały znalezione
+            missing_tickets = set(str(t) for t in tickets) - found_tickets
+            if missing_tickets:
+                print(f"PositionAnalyzer: Nie znaleziono ticketów: {missing_tickets}")
+            
+            print(f"PositionAnalyzer: Końcowo zwrócono {len(positions)} pozycji")
+            return positions
+            
+        except Exception as e:
+            print(f"Błąd podczas pobierania pozycji dla ticketów: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
