@@ -54,5 +54,13 @@
   "j": {
     "name": "jeszczeraz",
     "description": "gdy ponowilem setup"
+  },
+  "k": {
+    "name": "konsola",
+    "description": "skrajne poziomy konsoli"
+  },
+  "d": {
+    "name": "derrick",
+    "description": "derrika poziom"
   }
 }
