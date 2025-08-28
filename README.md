@@ -11,6 +11,14 @@ Zrefaktoryzowana i rozszerzona aplikacja do zarządzania dziennikiem transakcji 
 - **Uwzględnienie spread'u**: Realistyczne kalkulacje z uwzględnieniem kosztów
 - **Eksport wyników**: Zapis do CSV i bazy danych
 
+### 🎯 Filtry TrendS i TrendL (NOWE!)
+- **Filtrowanie według trendów**: Osobne filtry dla TrendS i TrendL z wartościami -3 do +3
+- **Interface checkboxów**: Rozwijane listy z checkboxami jak w filtrze Setup
+- **Opcja "puste"**: Możliwość filtrowania rekordów z NULL w polach trendów
+- **Domyślnie aktywne**: Wszystkie wartości zaznaczone przy starcie
+- **Kombinacja filtrów**: Oba filtry muszą być spełnione (logika AND)
+- **Integracja z TP**: Filtry uwzględniane w kalkulatorze Take Profit
+
 ### 🎯 Filtr Magic Number 007 (NOWE!)
 - **Filtrowanie według strategii**: Pokazuj/ukrywaj trejdy z magic_number = 007
 - **Domyślnie aktywny**: Checkbox zaznaczony przy starcie aplikacji

@@ -262,8 +262,26 @@ class DataViewer:
         # Załaduj setupy i dodaj do dropdown
         self._load_available_setups()
         
+        # Filtr TrendS - rozwijana lista z checkboxami
+        ttk.Label(self.filter_frame, text="TrendS:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        
+        self.trends_dropdown = CheckboxDropdown(self.filter_frame, callback=self.load_data, default_text="TrendS")
+        self.trends_dropdown.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+        
+        # Załaduj wartości TrendS
+        self._load_trend_values(self.trends_dropdown)
+        
+        # Filtr TrendL - rozwijana lista z checkboxami
+        ttk.Label(self.filter_frame, text="TrendL:").grid(row=2, column=2, padx=5, pady=5, sticky="w")
+        
+        self.trendl_dropdown = CheckboxDropdown(self.filter_frame, callback=self.load_data, default_text="TrendL")
+        self.trendl_dropdown.grid(row=2, column=3, padx=5, pady=5, sticky="w")
+        
+        # Załaduj wartości TrendL
+        self._load_trend_values(self.trendl_dropdown)
+        
         # Filtr Wątpliwe trejdy - lista rozwijana
-        ttk.Label(self.filter_frame, text="Wątpliwe trejdy:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(self.filter_frame, text="Wątpliwe trejdy:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
         
         # Lista rozwijana z opcjami filtrowania
         self.suspicious_trades_var = tk.StringVar(value="nieaktywny")  # Domyślnie nieaktywny
@@ -274,7 +292,7 @@ class DataViewer:
             state="readonly",
             width=20
         )
-        self.suspicious_trades_combo.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+        self.suspicious_trades_combo.grid(row=3, column=1, padx=5, pady=5, sticky="w")
         self.suspicious_trades_combo.bind("<<ComboboxSelected>>", lambda e: self.load_data())
         
         # Przyciski diagnostyczne i narzędzia zostały przeniesione do menu Narzędzia -> Ustawienia
@@ -537,6 +555,30 @@ class DataViewer:
         except Exception as e:
             print(f"Błąd podczas ładowania setupów: {e}")
             messagebox.showerror("Błąd", f"Nie można załadować setupów: {e}")
+    
+    def _load_trend_values(self, dropdown):
+        """Ładuje wartości trendów (-3 do +3 oraz puste) do dropdown"""
+        try:
+            # Wartości od -3 do +3
+            for value in range(-3, 4):  # -3, -2, -1, 0, 1, 2, 3
+                dropdown.add_item(
+                    str(value),  # klucz jako string
+                    str(value),  # wyświetlany tekst
+                    checked=True  # domyślnie wszystkie zaznaczone
+                )
+            
+            # Dodaj opcję "puste" dla wartości NULL
+            dropdown.add_item(
+                "NULL",  # klucz
+                "puste",  # wyświetlany tekst
+                checked=True  # domyślnie zaznaczone
+            )
+            
+            print(f"Załadowano wartości trendów do dropdown: -3 do +3 oraz puste")
+            
+        except Exception as e:
+            print(f"Błąd podczas ładowania wartości trendów: {e}")
+            messagebox.showerror("Błąd", f"Nie można załadować wartości trendów: {e}")
     
     def _on_setup_filter_change(self):
         """Obsługuje zmianę w filtrze Setup"""
@@ -873,6 +915,40 @@ class DataViewer:
                     self.winrate_label.config(text="0.00%")
                     return
             
+            # Warunek dla filtra TrendS
+            selected_trends = self.trends_dropdown.get_selected()
+            if selected_trends and len(selected_trends) < len(self.trends_dropdown.items):
+                # Nie wszystkie wartości TrendS wybrane - dodaj filtr
+                trend_conditions = []
+                for trend_val in selected_trends:
+                    if trend_val == "NULL":
+                        trend_conditions.append("trends IS NULL")
+                    else:
+                        trend_conditions.append("trends = ?")
+                        base_params.append(int(trend_val))
+                
+                if trend_conditions:
+                    trends_clause = " OR ".join(trend_conditions)
+                    where_conditions.append(f"({trends_clause})")
+                    print(f"Filtr TrendS aktywny - wybrane wartości: {selected_trends}")
+            
+            # Warunek dla filtra TrendL
+            selected_trendl = self.trendl_dropdown.get_selected()
+            if selected_trendl and len(selected_trendl) < len(self.trendl_dropdown.items):
+                # Nie wszystkie wartości TrendL wybrane - dodaj filtr
+                trendl_conditions = []
+                for trend_val in selected_trendl:
+                    if trend_val == "NULL":
+                        trendl_conditions.append("trendl IS NULL")
+                    else:
+                        trendl_conditions.append("trendl = ?")
+                        base_params.append(int(trend_val))
+                
+                if trendl_conditions:
+                    trendl_clause = " OR ".join(trendl_conditions)
+                    where_conditions.append(f"({trendl_clause})")
+                    print(f"Filtr TrendL aktywny - wybrane wartości: {selected_trendl}")
+            
             # Warunek dla filtra Wątpliwe trejdy
             suspicious_filter = self.suspicious_trades_var.get()
             if suspicious_filter == "tylko wątpliwe":
@@ -1203,6 +1279,15 @@ class DataViewer:
             if self.setup_filter_active_var.get():
                 selected_setups = self.setup_dropdown.get_selected()
                 active_filters.append(f"Setup: {', '.join(selected_setups)}")
+            
+            # Sprawdź filtry TrendS i TrendL
+            selected_trends = self.trends_dropdown.get_selected()
+            if len(selected_trends) < len(self.trends_dropdown.items):
+                active_filters.append(f"TrendS: {', '.join(selected_trends)}")
+                
+            selected_trendl = self.trendl_dropdown.get_selected()
+            if len(selected_trendl) < len(self.trendl_dropdown.items):
+                active_filters.append(f"TrendL: {', '.join(selected_trendl)}")
             
             suspicious_filter = self.suspicious_trades_var.get()
             if suspicious_filter != "nieaktywny":
